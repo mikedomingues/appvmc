@@ -51,8 +51,8 @@ with st.form("add_name_form"):
     novo_nome = st.text_input("Escreve o nome")
     submitted = st.form_submit_button("Adicionar")
     if submitted and novo_nome.strip():
-        novo_df = pd.DataFrame([{"Nome": novo_nome.strip(), "Visível": True}])
-        df = pd.concat([df, novo_df], ignore_index=True)
+    novo_df = pd.DataFrame([{"Nome": novo_nome.strip(), "Visível": True}])
+df = pd.concat([df, novo_df], ignore_index=True)
         save_data(df)
         st.success(f"Nome '{novo_nome}' adicionado com sucesso!")
         st.experimental_rerun()
