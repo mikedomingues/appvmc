@@ -62,7 +62,15 @@ st.title("📅 Gestão de Reuniões")
 st.subheader("Definir Semanas do Mês")
 primeira_semana = st.date_input("Escolhe a primeira semana do mês")
 num_semanas = st.radio("Número de semanas:", [4, 5], index=0)
-semanas = [(primeira_semana + timedelta(weeks=i)).strftime("%d %b") for i in range(num_semanas)]
+
+# Corrigir para gerar segundas-feiras consecutivas
+semanas = []
+data = primeira_semana
+for _ in range(num_semanas):
+    while data.weekday() != 0:
+        data += timedelta(days=1)
+    semanas.append(data.strftime("%d %b"))
+    data += timedelta(weeks=1)
 
 nomes_df = load_nomes()
 partes_df = load_partes(semanas)
