@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
 import os
+from fpdf import FPDF
 
-# Configuração da página
-st.set_page_config(page_title="Gestão de Nomes", page_icon="👤", layout="centered")
+st.set_page_config(page_title="Base de Dados de Nomes", page_icon="👤", layout="centered")
 
-# Caminho do ficheiro CSV
 DB_FILE = "nomes.csv"
 
 # Função para carregar a base de dados
@@ -18,6 +17,24 @@ def load_data():
 # Função para guardar a base de dados
 def save_data(df):
     df.to_csv(DB_FILE, index=False)
+
+# Função para exportar para PDF
+def export_pdf(df):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt="Lista de Nomes", ln=True, align="C")
+
+    # Cabeçalho
+    pdf.cell(100, 10, "Nome", 1, 0, "C")
+    pdf.cell(40, 10, "Visível", 1, 1, "C")
+
+    # Linhas
+    for _, row in df.iterrows():
+        pdf.cell(100, 10, str(row["Nome"]), 1, 0)
+        pdf.cell(40, 10, str(row["Visível"]), 1, 1)
+
+    return pdf.output(dest="S").encode("latin-1")
 
 # Carregar dados existentes
 df = load_data()
@@ -34,7 +51,8 @@ with st.form("add_name_form"):
     novo_nome = st.text_input("Escreve o nome")
     submitted = st.form_submit_button("Adicionar")
     if submitted and novo_nome.strip():
-        df = df.append({"Nome": novo_nome.strip(), "Visível": True}, ignore_index=True)
+        novo_df = pd.DataFrame([{"Nome": novo_nome.strip(), "Visível": True}])
+        df = pd.concat([df, novo_df], ignore_index=True)
         save_data(df)
         st.success(f"Nome '{novo_nome}' adicionado com sucesso!")
         st.experimental_rerun()
@@ -58,3 +76,10 @@ for i, row in df.iterrows():
         df = df.drop(i).reset_index(drop=True)
         save_data(df)
         st.experimental_rerun()
+
+# Exportar CSV
+st.download_button("📥 Exportar CSV", data=df.to_csv(index=False), file_name="nomes.csv", mime="text/csv")
+
+# Exportar PDF
+pdf_bytes = export_pdf(df)
+st.download_button("📄 Exportar PDF", data=pdf_bytes, file_name="nomes.pdf", mime="application/pdf")
