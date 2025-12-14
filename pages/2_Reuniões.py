@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime, timedelta
+from datetime import timedelta
+from fpdf import FPDF
 
 DB_FILE = "nomes.csv"
 PARTES_FILE = "partes.csv"
@@ -16,7 +17,6 @@ def load_partes(semanas):
     if os.path.exists(PARTES_FILE):
         return pd.read_csv(PARTES_FILE)
     else:
-        # Estrutura inicial baseada no modelo
         return pd.DataFrame({
             "Semana": semanas,
             "Presidente": ["" for _ in semanas],
@@ -35,24 +35,40 @@ def load_partes(semanas):
 def save_partes(df):
     df.to_csv(PARTES_FILE, index=False)
 
+def export_pdf(df):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt="Reunião Vida e Ministério Cristãos", ln=True, align="C")
+
+    # Cabeçalho
+    colunas = list(df.columns)
+    pdf.set_font("Arial", size=10)
+    for col in colunas:
+        pdf.cell(40, 10, col, 1, 0, "C")
+    pdf.ln()
+
+    # Linhas
+    for _, row in df.iterrows():
+        for col in colunas:
+            pdf.cell(40, 10, str(row[col]), 1, 0)
+        pdf.ln()
+
+    return pdf.output(dest="S").encode("latin-1")
+
+# --- Interface ---
 st.title("📅 Gestão de Reuniões")
 
-# --- Escolher primeira semana ---
 st.subheader("Definir Semanas do Mês")
 primeira_semana = st.date_input("Escolhe a primeira semana do mês")
-
-# Escolher se o mês tem 4 ou 5 semanas
 num_semanas = st.radio("Número de semanas:", [4, 5], index=0)
-
-# Gerar lista de semanas
 semanas = [(primeira_semana + timedelta(weeks=i)).strftime("%d %b") for i in range(num_semanas)]
 
 nomes_df = load_nomes()
 partes_df = load_partes(semanas)
 
-# --- Mostrar layout com selectboxes ---
 st.subheader("Designações")
-for col in partes_df.columns[1:]:  # ignora coluna "Semana"
+for col in partes_df.columns[1:]:
     st.markdown(f"### {col}")
     for i, semana in enumerate(partes_df["Semana"]):
         opcoes = [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist()
@@ -66,14 +82,13 @@ for col in partes_df.columns[1:]:  # ignora coluna "Semana"
             key=f"{col}_{i}"
         )
 
-# --- Guardar alterações ---
 if st.button("💾 Guardar Designações"):
     save_partes(partes_df)
     st.success("Designações guardadas com sucesso!")
 
-# Exportar PDF
-pdf_bytes = export_pdf(df)
-st.download_button("📄 Exportar PDF", data=pdf_bytes, file_name="nomes.pdf", mime="application/pdf")
-
-# --- Exportar CSV ---
+# Exportar CSV
 st.download_button("📥 Exportar CSV", data=partes_df.to_csv(index=False), file_name="partes.csv", mime="text/csv")
+
+# Exportar PDF
+pdf_bytes = export_pdf(partes_df)
+st.download_button("📄 Exportar PDF", data=pdf_bytes, file_name="partes.pdf", mime="application/pdf")
