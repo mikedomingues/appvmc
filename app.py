@@ -51,11 +51,11 @@ with st.form("add_name_form"):
     novo_nome = st.text_input("Escreve o nome")
     submitted = st.form_submit_button("Adicionar")
     if submitted and novo_nome.strip():
-    novo_df = pd.DataFrame([{"Nome": novo_nome.strip(), "Visível": True}])
-df = pd.concat([df, novo_df], ignore_index=True)
+        novo_df = pd.DataFrame([{"Nome": novo_nome.strip(), "Visível": True}])
+        df = pd.concat([df, novo_df], ignore_index=True)
         save_data(df)
         st.success(f"Nome '{novo_nome}' adicionado com sucesso!")
-        st.experimental_rerun()
+        st.stop()  # evita crash do experimental_rerun
 
 # Secção para gerir nomes
 st.subheader("Gerir Nomes")
@@ -66,16 +66,16 @@ for i, row in df.iterrows():
         if col2.button("Ocultar", key=f"hide_{i}"):
             df.at[i, "Visível"] = False
             save_data(df)
-            st.experimental_rerun()
+            st.stop()
     else:
         if col2.button("Reativar", key=f"show_{i}"):
             df.at[i, "Visível"] = True
             save_data(df)
-            st.experimental_rerun()
+            st.stop()
     if col3.button("Eliminar", key=f"delete_{i}"):
         df = df.drop(i).reset_index(drop=True)
         save_data(df)
-        st.experimental_rerun()
+        st.stop()
 
 # Exportar CSV
 st.download_button("📥 Exportar CSV", data=df.to_csv(index=False), file_name="nomes.csv", mime="text/csv")
