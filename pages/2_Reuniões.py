@@ -55,6 +55,10 @@ if st.button("💾 Guardar Designações"):
     save_partes(partes_df)
     st.success("Designações guardadas com sucesso!")
 
+# Exportar PDF
+pdf_bytes = export_pdf(df)
+st.download_button("📄 Exportar PDF", data=pdf_bytes, file_name="nomes.pdf", mime="application/pdf")
+
 # Exportar CSV
 st.download_button("📥 Exportar CSV", data=partes_df.to_csv(index=False), file_name="partes.csv", mime="text/csv")
 
