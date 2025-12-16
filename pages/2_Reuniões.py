@@ -65,15 +65,26 @@ for semana in semanas:
                                    key=f"{semana}_{parte}")
         dados.append({"Semana": semana, "Secção": "Tesouros da Palavra de Deus", "Parte": parte, "Responsável": responsavel})
 
-    # Secção Empenha-se no Ministério (dinâmica)
+    # Secção Empenha-se no Ministério (pares)
     st.markdown(f"### Empenha-se no Ministério ({semana})")
     num_partes_min = st.number_input(f"Número de partes (3-4) - {semana}", min_value=3, max_value=4, value=3, key=f"ministerio_{semana}")
     for i in range(num_partes_min):
         nome_parte = st.text_input(f"Nome da parte {i+1} ({semana})", f"Parte {i+1}", key=f"ministerio_nome_{semana}_{i}")
-        responsavel = st.selectbox(f"{nome_parte} ({semana})",
-                                   [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
-                                   key=f"ministerio_resp_{semana}_{i}")
-        dados.append({"Semana": semana, "Secção": "Empenha-se no Ministério", "Parte": nome_parte, "Responsável": responsavel})
+        
+        responsavel1 = st.selectbox(f"{nome_parte} - Designado 1 ({semana})",
+                                    [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
+                                    key=f"ministerio_resp1_{semana}_{i}")
+        
+        responsavel2 = st.selectbox(f"{nome_parte} - Designado 2 ({semana})",
+                                    [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
+                                    key=f"ministerio_resp2_{semana}_{i}")
+        
+        dados.append({
+            "Semana": semana,
+            "Secção": "Empenha-se no Ministério",
+            "Parte": nome_parte,
+            "Responsável": f"{responsavel1} / {responsavel2}"
+        })
 
     # Secção Viver como Cristãos (dinâmica + fixa)
     st.markdown(f"### Viver como Cristãos ({semana})")
