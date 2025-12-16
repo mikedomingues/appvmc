@@ -21,24 +21,28 @@ def export_pdf(df):
     pdf.set_font("Arial", "B", 14)
     pdf.cell(190, 10, "Reunião Vida e Ministério Cristãos", ln=True, align="C")
 
-    # Agrupar por secção
-    for secao, grupo in df.groupby("Secção"):
-        pdf.ln(5)
+    # Agrupar por semana
+    for semana, grupo_semana in df.groupby("Semana"):
+        pdf.ln(8)
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(190, 8, to_latin1(secao), ln=True, align="L")
+        pdf.cell(190, 8, to_latin1(f"SEMANA - {semana}"), ln=True, align="L")
 
-        pdf.set_font("Arial", "B", 10)
-        pdf.cell(40, 8, "Semana", 1)
-        pdf.cell(80, 8, "Parte", 1)
-        pdf.cell(70, 8, "Responsável", 1)
-        pdf.ln()
+        # Agrupar por secção dentro da semana
+        for secao, grupo_secao in grupo_semana.groupby("Secção"):
+            pdf.ln(4)
+            pdf.set_font("Arial", "B", 11)
+            pdf.cell(190, 8, to_latin1(secao), ln=True, align="L")
 
-        pdf.set_font("Arial", "", 10)
-        for _, row in grupo.iterrows():
-            pdf.cell(40, 8, to_latin1(row["Semana"]), 1)
-            pdf.cell(80, 8, to_latin1(row["Parte"]), 1)
-            pdf.cell(70, 8, to_latin1(row["Responsável"]), 1)
+            pdf.set_font("Arial", "B", 10)
+            pdf.cell(80, 8, "Parte", 1)
+            pdf.cell(110, 8, "Responsável", 1)
             pdf.ln()
+
+            pdf.set_font("Arial", "", 10)
+            for _, row in grupo_secao.iterrows():
+                pdf.cell(80, 8, to_latin1(row["Parte"]), 1)
+                pdf.cell(110, 8, to_latin1(row["Responsável"]), 1)
+                pdf.ln()
 
     return pdf.output(dest="S").encode("latin-1")
 
@@ -65,7 +69,13 @@ for idx, semana in enumerate(semanas, start=1):
     presidente = st.selectbox(f"Presidente ({semana})",
                               [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
                               key=f"presidente_{semana}")
-    dados.append({"Semana": semana, "Secção": "Presidente da Reunião", "Parte": "Presidente", "Responsável": presidente})
+    dados.append({"Semana": semana, "Secção": "Início da Reunião", "Parte": "Presidente", "Responsável": presidente})
+
+    # Oração Inicial
+    oracao_inicial = st.selectbox(f"Oração Inicial ({semana})",
+                                  [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
+                                  key=f"oracao_inicial_{semana}")
+    dados.append({"Semana": semana, "Secção": "Início da Reunião", "Parte": "Oração Inicial", "Responsável": oracao_inicial})
 
     # Secção Tesouros da Palavra de Deus (fixa)
     st.subheader("Tesouros da Palavra de Deus")
@@ -98,11 +108,16 @@ for idx, semana in enumerate(semanas, start=1):
                             key=f"viver_resp_{semana}_{i}")
         dados.append({"Semana": semana, "Secção": "Viver como Cristãos", "Parte": nome_parte, "Responsável": resp})
 
-    # Parte fixa: Estudo Bíblico de Congregação
-    resp = st.selectbox(f"Estudo Bíblico de Congregação ({semana})",
-                        [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
-                        key=f"estudo_{semana}")
-    dados.append({"Semana": semana, "Secção": "Viver como Cristãos", "Parte": "Estudo Bíblico de Congregação", "Responsável": resp})
+    # Estudo Bíblico de Congregação (Responsável + Leitor)
+    st.subheader("Estudo Bíblico de Congregação")
+    responsavel_estudo = st.selectbox(f"Responsável ({semana})",
+                                      [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
+                                      key=f"estudo_resp_{semana}")
+    leitor_estudo = st.selectbox(f"Leitor ({semana})",
+                                 [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
+                                 key=f"estudo_leitor_{semana}")
+    dados.append({"Semana": semana, "Secção": "Viver como Cristãos", "Parte": "Estudo Bíblico de Congregação", "Responsável": responsavel_estudo})
+    dados.append({"Semana": semana, "Secção": "Viver como Cristãos", "Parte": "Leitor do Estudo Bíblico", "Responsável": leitor_estudo})
 
     # Secção Final da Reunião
     st.subheader("Final da Reunião")
@@ -114,23 +129,7 @@ for idx, semana in enumerate(semanas, start=1):
                             key=f"final_resp_{semana}_{i}")
         dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": nome_parte, "Responsável": resp})
 
-    # Última parte fixa: Estudo Bíblico de Congregação
+    # Última parte fixa: Estudo Bíblico de Congregação (Final)
     resp = st.selectbox(f"Estudo Bíblico de Congregação (Final) ({semana})",
                         [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
-                        key=f"final_estudo_{semana}")
-    dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": "Estudo Bíblico de Congregação", "Responsável": resp})
-
-# Criar DataFrame final
-partes_df = pd.DataFrame(dados)
-
-# Guardar CSV
-if st.button("💾 Guardar Designações"):
-    partes_df.to_csv("partes.csv", index=False)
-    st.success("Designações guardadas com sucesso!")
-
-# Exportar CSV
-st.download_button("📥 Exportar CSV", data=partes_df.to_csv(index=False), file_name="partes.csv", mime="text/csv")
-
-# Exportar PDF
-pdf_bytes = export_pdf(partes_df)
-st.download_button("📄 Exportar PDF", data=pdf_bytes, file_name="partes.pdf", mime="application/pdf")
+                        key=f"
