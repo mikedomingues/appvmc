@@ -60,6 +60,14 @@ dados = []
 for idx, semana in enumerate(semanas, start=1):
     st.header(f"📅 Semana {idx} - {semana}")
 
+    # Presidente da reunião
+st.subheader("Presidente da Reunião")
+presidente = st.selectbox(f"Presidente ({semana})",
+                          [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
+                          key=f"presidente_{semana}")
+dados.append({"Semana": semana, "Secção": "Presidente da Reunião", "Parte": "Presidente", "Responsável": presidente})
+
+
     # Secção Tesouros da Palavra de Deus (fixa)
     st.subheader("Tesouros da Palavra de Deus")
     for parte in ["Tesouros da Palavra de Deus", "Pérolas Espirituais", "Leitura da Bíblia"]:
