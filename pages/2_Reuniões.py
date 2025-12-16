@@ -18,20 +18,22 @@ def to_latin1(text):
 def export_pdf(df):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(190, 10, "Reunião Vida e Ministério Cristãos", ln=True, align="C")
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(190, 12, "Designações da Reunião Vida e Ministério Cristãos", ln=True, align="C")
 
     # Agrupar por semana
     for semana, grupo_semana in df.groupby("Semana"):
-        pdf.ln(8)
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(190, 8, to_latin1(f"SEMANA - {semana}"), ln=True, align="L")
+        pdf.ln(10)
+        pdf.set_font("Arial", "B", 14)
+        pdf.set_fill_color(200, 200, 200)  # fundo cinza
+        pdf.cell(190, 10, to_latin1(f"SEMANA - {semana}"), ln=True, align="L", fill=True)
 
         # Agrupar por secção dentro da semana
         for secao, grupo_secao in grupo_semana.groupby("Secção"):
-            pdf.ln(4)
-            pdf.set_font("Arial", "B", 11)
-            pdf.cell(190, 8, to_latin1(secao), ln=True, align="L")
+            pdf.ln(5)
+            pdf.set_font("Arial", "B", 12)
+            pdf.set_fill_color(220, 220, 220)
+            pdf.cell(190, 8, to_latin1(secao), ln=True, align="L", fill=True)
 
             pdf.set_font("Arial", "B", 10)
             pdf.cell(80, 8, "Parte", 1)
@@ -98,7 +100,7 @@ for idx, semana in enumerate(semanas, start=1):
                              key=f"ministerio_resp2_{semana}_{i}")
         dados.append({"Semana": semana, "Secção": "Empenha-se no Ministério", "Parte": nome_parte, "Responsável": f"{resp1} / {resp2}"})
 
-    # Secção Viver como Cristãos (dinâmica + fixa)
+    # Secção Viver como Cristãos (dinâmica)
     st.subheader("Viver como Cristãos")
     num_partes_viver = st.number_input(f"Número de partes adicionais (0-2) - {semana}", min_value=0, max_value=2, value=1, key=f"viver_{semana}")
     for i in range(num_partes_viver):
@@ -127,16 +129,4 @@ for idx, semana in enumerate(semanas, start=1):
         resp = st.selectbox(f"{nome_parte} ({semana})",
                             [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
                             key=f"final_resp_{semana}_{i}")
-        dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": nome_parte, "Responsável": resp})
-
-    # Última parte fixa: Estudo Bíblico de Congregação (Final)
-resp_final_estudo = st.selectbox(f"Estudo Bíblico de Congregação (Final) ({semana})",
-                                 [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
-                                 key=f"final_estudo_{semana}")
-dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": "Estudo Bíblico de Congregação", "Responsável": resp_final_estudo})
-
-# Oração Final
-oracao_final = st.selectbox(f"Oração Final ({semana})",
-                            [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
-                            key=f"oracao_final_{semana}")
-dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": "Oração Final", "Responsável": oracao_final})
+        dados.append({"Semana": semana, "Secção": "Final da Reuni
