@@ -130,6 +130,13 @@ for idx, semana in enumerate(semanas, start=1):
         dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": nome_parte, "Responsável": resp})
 
     # Última parte fixa: Estudo Bíblico de Congregação (Final)
-    resp = st.selectbox(f"Estudo Bíblico de Congregação (Final) ({semana})",
-                        [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
-                        key=f"
+resp_final_estudo = st.selectbox(f"Estudo Bíblico de Congregação (Final) ({semana})",
+                                 [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
+                                 key=f"final_estudo_{semana}")
+dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": "Estudo Bíblico de Congregação", "Responsável": resp_final_estudo})
+
+# Oração Final
+oracao_final = st.selectbox(f"Oração Final ({semana})",
+                            [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
+                            key=f"oracao_final_{semana}")
+dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": "Oração Final", "Responsável": oracao_final})
