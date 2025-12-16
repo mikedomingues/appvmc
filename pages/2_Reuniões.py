@@ -57,8 +57,11 @@ nomes_df = load_nomes()
 # Estrutura dinâmica
 dados = []
 
-for semana in semanas:
+for idx, semana in enumerate(semanas, start=1):
+    st.header(f"📅 Semana {idx} - {semana}")
+
     # Secção Tesouros da Palavra de Deus (fixa)
+    st.subheader("Tesouros da Palavra de Deus")
     for parte in ["Tesouros da Palavra de Deus", "Pérolas Espirituais", "Leitura da Bíblia"]:
         responsavel = st.selectbox(f"{parte} ({semana})",
                                    [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
@@ -66,57 +69,49 @@ for semana in semanas:
         dados.append({"Semana": semana, "Secção": "Tesouros da Palavra de Deus", "Parte": parte, "Responsável": responsavel})
 
     # Secção Empenha-se no Ministério (pares)
-    st.markdown(f"### Empenha-se no Ministério ({semana})")
+    st.subheader("Empenha-se no Ministério")
     num_partes_min = st.number_input(f"Número de partes (3-4) - {semana}", min_value=3, max_value=4, value=3, key=f"ministerio_{semana}")
     for i in range(num_partes_min):
         nome_parte = st.text_input(f"Nome da parte {i+1} ({semana})", f"Parte {i+1}", key=f"ministerio_nome_{semana}_{i}")
-        
-        responsavel1 = st.selectbox(f"{nome_parte} - Designado 1 ({semana})",
-                                    [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
-                                    key=f"ministerio_resp1_{semana}_{i}")
-        
-        responsavel2 = st.selectbox(f"{nome_parte} - Designado 2 ({semana})",
-                                    [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
-                                    key=f"ministerio_resp2_{semana}_{i}")
-        
-        dados.append({
-            "Semana": semana,
-            "Secção": "Empenha-se no Ministério",
-            "Parte": nome_parte,
-            "Responsável": f"{responsavel1} / {responsavel2}"
-        })
+        resp1 = st.selectbox(f"{nome_parte} - Designado 1 ({semana})",
+                             [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
+                             key=f"ministerio_resp1_{semana}_{i}")
+        resp2 = st.selectbox(f"{nome_parte} - Designado 2 ({semana})",
+                             [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
+                             key=f"ministerio_resp2_{semana}_{i}")
+        dados.append({"Semana": semana, "Secção": "Empenha-se no Ministério", "Parte": nome_parte, "Responsável": f"{resp1} / {resp2}"})
 
     # Secção Viver como Cristãos (dinâmica + fixa)
-    st.markdown(f"### Viver como Cristãos ({semana})")
+    st.subheader("Viver como Cristãos")
     num_partes_viver = st.number_input(f"Número de partes adicionais (0-2) - {semana}", min_value=0, max_value=2, value=1, key=f"viver_{semana}")
     for i in range(num_partes_viver):
         nome_parte = st.text_input(f"Nome da parte {i+1} ({semana})", f"Parte {i+1}", key=f"viver_nome_{semana}_{i}")
-        responsavel = st.selectbox(f"{nome_parte} ({semana})",
-                                   [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
-                                   key=f"viver_resp_{semana}_{i}")
-        dados.append({"Semana": semana, "Secção": "Viver como Cristãos", "Parte": nome_parte, "Responsável": responsavel})
+        resp = st.selectbox(f"{nome_parte} ({semana})",
+                            [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
+                            key=f"viver_resp_{semana}_{i}")
+        dados.append({"Semana": semana, "Secção": "Viver como Cristãos", "Parte": nome_parte, "Responsável": resp})
 
     # Parte fixa: Estudo Bíblico de Congregação
-    responsavel = st.selectbox(f"Estudo Bíblico de Congregação ({semana})",
-                               [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
-                               key=f"estudo_{semana}")
-    dados.append({"Semana": semana, "Secção": "Viver como Cristãos", "Parte": "Estudo Bíblico de Congregação", "Responsável": responsavel})
+    resp = st.selectbox(f"Estudo Bíblico de Congregação ({semana})",
+                        [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
+                        key=f"estudo_{semana}")
+    dados.append({"Semana": semana, "Secção": "Viver como Cristãos", "Parte": "Estudo Bíblico de Congregação", "Responsável": resp})
 
     # Secção Final da Reunião
-    st.markdown(f"### Final da Reunião ({semana})")
+    st.subheader("Final da Reunião")
     num_partes_final = st.number_input(f"Número de partes finais (2-3) - {semana}", min_value=2, max_value=3, value=2, key=f"final_{semana}")
-    for i in range(num_partes_final-1):  # últimas antes do Estudo
+    for i in range(num_partes_final-1):
         nome_parte = st.text_input(f"Nome da parte final {i+1} ({semana})", f"Parte Final {i+1}", key=f"final_nome_{semana}_{i}")
-        responsavel = st.selectbox(f"{nome_parte} ({semana})",
-                                   [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
-                                   key=f"final_resp_{semana}_{i}")
-        dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": nome_parte, "Responsável": responsavel})
+        resp = st.selectbox(f"{nome_parte} ({semana})",
+                            [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
+                            key=f"final_resp_{semana}_{i}")
+        dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": nome_parte, "Responsável": resp})
 
     # Última parte fixa: Estudo Bíblico de Congregação
-    responsavel = st.selectbox(f"Estudo Bíblico de Congregação (Final) ({semana})",
-                               [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
-                               key=f"final_estudo_{semana}")
-    dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": "Estudo Bíblico de Congregação", "Responsável": responsavel})
+    resp = st.selectbox(f"Estudo Bíblico de Congregação (Final) ({semana})",
+                        [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist(),
+                        key=f"final_estudo_{semana}")
+    dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": "Estudo Bíblico de Congregação", "Responsável": resp})
 
 # Criar DataFrame final
 partes_df = pd.DataFrame(dados)
