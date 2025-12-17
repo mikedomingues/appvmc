@@ -33,14 +33,10 @@ def export_pdf(df):
     pdf.set_auto_page_break(auto=False)
     pdf.add_page()
 
-    # Cabeçalho geral
     pdf.set_font("Arial", "B", 12)
     pdf.cell(270, 8, to_latin1("Designações da Reunião Vida e Ministério Cristãos"), ln=True, align="C")
 
-    # Garantir ordem das semanas conforme interface
     semanas_ordenadas = list(pd.unique(df["Semana"]))
-
-    # Ordem fixa das secções
     ordem_secoes = [
         "Início da Reunião",
         "Tesouros da Palavra de Deus",
@@ -52,7 +48,6 @@ def export_pdf(df):
     for semana in semanas_ordenadas:
         grupo_semana = df[df["Semana"] == semana]
 
-        # Título da semana
         pdf.ln(3)
         pdf.set_font("Arial", "B", 10)
         pdf.set_fill_color(200, 200, 200)
@@ -63,25 +58,44 @@ def export_pdf(df):
             if grupo_secao.empty:
                 continue
 
-            # Cabeçalho da secção
+            # 🔹 Início da Reunião → mostrar direto
+            if secao == "Início da Reunião":
+                presidente = grupo_secao[grupo_secao["Parte"] == "Presidente"]["Responsável"].values[0]
+                oracao = grupo_secao[grupo_secao["Parte"] == "Oração Inicial"]["Responsável"].values[0]
+                pdf.set_font("Arial", "", 8)
+                pdf.cell(270, 5, to_latin1(f"Presidente: {presidente}"), ln=True)
+                pdf.cell(270, 5, to_latin1(f"Oração Inicial: {oracao}"), ln=True)
+                continue
+
+            # 🔹 Final da Reunião → mostrar apenas Oração Final
+            if secao == "Final da Reunião":
+                oracao_final = grupo_secao[grupo_secao["Parte"] == "Oração Final"]["Responsável"].values[0]
+                pdf.set_font("Arial", "", 8)
+                pdf.cell(270, 5, to_latin1(f"Oração Final: {oracao_final}"), ln=True)
+                continue
+
+            # 🔹 Secções normais com tabela
             pdf.set_font("Arial", "B", 8)
             pdf.set_fill_color(220, 220, 220)
             pdf.cell(270, 5, to_latin1(secao), ln=True, align="L", fill=True)
 
-            # Cabeçalho da tabela
             pdf.set_font("Arial", "B", 7)
-            pdf.cell(120, 5, to_latin1("Parte"), 1)
-            pdf.cell(150, 5, to_latin1("Responsável"), 1)
+            pdf.cell(120, 5, "Parte", 1)
+            pdf.cell(150, 5, "Responsável", 1)
             pdf.ln()
 
-            # Linhas da tabela
             pdf.set_font("Arial", "", 7)
             for _, row in grupo_secao.iterrows():
-                pdf.cell(120, 5, to_latin1(row["Parte"]), 1)
-                pdf.cell(150, 5, to_latin1(row["Responsável"]), 1)
+                parte = row["Parte"]
+                if parte in ["Presidente", "Oração Inicial", "Oração Final"]:
+                    continue  # já tratados acima
+                responsavel = row["Responsável"]
+                pdf.cell(120, 5, to_latin1(parte), 1)
+                pdf.cell(150, 5, to_latin1(responsavel), 1)
                 pdf.ln()
 
     return pdf.output(dest="S").encode("latin-1")
+
 
 # -------------------------
 # Interface
