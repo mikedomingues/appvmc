@@ -98,13 +98,16 @@ for idx, semana in enumerate(semanas, start=1):
         )
 
         if parte_escolhida == "Discurso":
-            resp = st.selectbox(f"{parte_escolhida} - Responsável ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_resp_{i}")
-            dados.append({
-                "Semana": semana,
-                "Secção": "Empenha-se no Ministério",
-                "Ordem": f"Parte {i+1}",
-                "Parte": f"{parte_escolhida} ({tempo} min)",
-                "Responsável": resp
+    tempo = 5  # tempo fixo
+    resp = st.selectbox(f"{parte_escolhida} - Responsável ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_resp_{i}")
+    dados.append({
+        "Semana": semana,
+        "Secção": "Empenha-se no Ministério",
+        "Ordem": f"Parte {i+1}",
+        "Parte": f"{parte_escolhida} ({tempo} min)",
+        "Responsável": resp
+    })
+
             })
         else:
             resp1 = st.selectbox(f"{parte_escolhida} - Designado 1 ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_1_{i}")
