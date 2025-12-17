@@ -96,56 +96,56 @@ for idx, semana in enumerate(semanas, start=1):
                 "Responsável": f"{resp1} / {resp2}"
             })
 
-    st.subheader("Viver como Cristãos")
-viver_partes = partes_cfg[partes_cfg["Secção"] == "Viver como Cristãos"]
+       st.subheader("Viver como Cristãos")
+    viver_partes = partes_cfg[partes_cfg["Secção"] == "Viver como Cristãos"]
 
-# Lista de partes variáveis + opção "Nenhuma"
-opcoes_variaveis = ["Nenhuma"] + ["Necessidades Locais", "Realizações da Organização", "Atualização Corpo Governante"]
+    opcoes_variaveis = ["Nenhuma"] + ["Necessidades Locais", "Realizações da Organização", "Atualização Corpo Governante"]
 
-# Escolher até 2 partes variáveis
-for i in range(2):
-    parte_escolhida = st.selectbox(
-        f"Parte variável {i+1} ({semana})",
-        opcoes_variaveis,
-        key=f"{semana}_viver_parte_{i}"
-    )
-
-    if parte_escolhida != "Nenhuma":
-        row = viver_partes[viver_partes["Parte"] == parte_escolhida].iloc[0]
-        tempo = st.number_input(
-            f"Tempo para {parte_escolhida} ({semana})",
-            min_value=int(row["TempoMin"]),
-            max_value=int(row["TempoMax"]),
-            value=int(row["TempoMin"]),
-            key=f"{semana}_viver_tempo_{i}"
+    for i in range(2):
+        parte_escolhida = st.selectbox(
+            f"Parte variável {i+1} ({semana})",
+            opcoes_variaveis,
+            key=f"{semana}_viver_parte_{i}"
         )
-        resp = st.selectbox(f"{parte_escolhida} - Responsável ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_resp_{i}")
-        dados.append({
-            "Semana": semana,
-            "Secção": "Viver como Cristãos",
-            "Ordem": f"Parte variável {i+1}",
-            "Parte": f"{parte_escolhida} ({tempo} min)",
-            "Responsável": resp
-        })
 
-# Partes fixas
-resp_estudo = st.selectbox(f"Estudo Bíblico de Congregação ({semana})", nomes_visiveis, key=f"{semana}_estudo_biblico")
-dados.append({
-    "Semana": semana,
-    "Secção": "Viver como Cristãos",
-    "Ordem": "Parte fixa 1",
-    "Parte": "Estudo Bíblico de Congregação (30 min)",
-    "Responsável": resp_estudo
-})
+        if parte_escolhida != "Nenhuma":
+            row = viver_partes[viver_partes["Parte"] == parte_escolhida].iloc[0]
+            tempo = st.number_input(
+                f"Tempo para {parte_escolhida} ({semana})",
+                min_value=int(row["TempoMin"]),
+                max_value=int(row["TempoMax"]),
+                value=int(row["TempoMin"]),
+                key=f"{semana}_viver_tempo_{i}"
+            )
+            resp = st.selectbox(f"{parte_escolhida} - Responsável ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_resp_{i}")
+            dados.append({
+                "Semana": semana,
+                "Secção": "Viver como Cristãos",
+                "Ordem": f"Parte variável {i+1}",
+                "Parte": f"{parte_escolhida} ({tempo} min)",
+                "Responsável": resp
+            })
 
-resp_leitor = st.selectbox(f"Leitor do Estudo Bíblico ({semana})", nomes_visiveis, key=f"{semana}_leitor_estudo")
-dados.append({
-    "Semana": semana,
-    "Secção": "Viver como Cristãos",
-    "Ordem": "Parte fixa 2",
-    "Parte": "Leitor do Estudo Bíblico (0 min)",
-    "Responsável": resp_leitor
-})
+    # Parte fixa 1: Estudo Bíblico
+    resp_estudo = st.selectbox(f"Estudo Bíblico de Congregação ({semana})", nomes_visiveis, key=f"{semana}_estudo_biblico")
+    dados.append({
+        "Semana": semana,
+        "Secção": "Viver como Cristãos",
+        "Ordem": "Parte fixa 1",
+        "Parte": "Estudo Bíblico de Congregação (30 min)",
+        "Responsável": resp_estudo
+    })
+
+    # Parte fixa 2: Leitor
+    resp_leitor = st.selectbox(f"Leitor do Estudo Bíblico ({semana})", nomes_visiveis, key=f"{semana}_leitor_estudo")
+    dados.append({
+        "Semana": semana,
+        "Secção": "Viver como Cristãos",
+        "Ordem": "Parte fixa 2",
+        "Parte": "Leitor do Estudo Bíblico (0 min)",
+        "Responsável": resp_leitor
+    })
+
 
 
 
