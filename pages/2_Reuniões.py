@@ -96,10 +96,10 @@ for idx, semana in enumerate(semanas, start=1):
                 "Responsável": f"{resp1} / {resp2}"
             })
 
-       st.subheader("Viver como Cristãos")
+          st.subheader("Viver como Cristãos")
     viver_partes = partes_cfg[partes_cfg["Secção"] == "Viver como Cristãos"]
 
-    opcoes_variaveis = ["Nenhuma"] + ["Necessidades Locais", "Realizações da Organização", "Atualização Corpo Governante"]
+    opcoes_variaveis = ["Nenhuma", "Necessidades Locais", "Realizações da Organização", "Atualização Corpo Governante"]
 
     for i in range(2):
         parte_escolhida = st.selectbox(
@@ -117,7 +117,11 @@ for idx, semana in enumerate(semanas, start=1):
                 value=int(row["TempoMin"]),
                 key=f"{semana}_viver_tempo_{i}"
             )
-            resp = st.selectbox(f"{parte_escolhida} - Responsável ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_resp_{i}")
+            resp = st.selectbox(
+                f"{parte_escolhida} - Responsável ({semana})",
+                nomes_visiveis,
+                key=f"{semana}_{parte_escolhida}_resp_{i}"
+            )
             dados.append({
                 "Semana": semana,
                 "Secção": "Viver como Cristãos",
@@ -126,8 +130,11 @@ for idx, semana in enumerate(semanas, start=1):
                 "Responsável": resp
             })
 
-    # Parte fixa 1: Estudo Bíblico
-    resp_estudo = st.selectbox(f"Estudo Bíblico de Congregação ({semana})", nomes_visiveis, key=f"{semana}_estudo_biblico")
+    resp_estudo = st.selectbox(
+        f"Estudo Bíblico de Congregação ({semana})",
+        nomes_visiveis,
+        key=f"{semana}_estudo_biblico"
+    )
     dados.append({
         "Semana": semana,
         "Secção": "Viver como Cristãos",
@@ -136,8 +143,11 @@ for idx, semana in enumerate(semanas, start=1):
         "Responsável": resp_estudo
     })
 
-    # Parte fixa 2: Leitor
-    resp_leitor = st.selectbox(f"Leitor do Estudo Bíblico ({semana})", nomes_visiveis, key=f"{semana}_leitor_estudo")
+    resp_leitor = st.selectbox(
+        f"Leitor do Estudo Bíblico ({semana})",
+        nomes_visiveis,
+        key=f"{semana}_leitor_estudo"
+    )
     dados.append({
         "Semana": semana,
         "Secção": "Viver como Cristãos",
