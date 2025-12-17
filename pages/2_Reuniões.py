@@ -161,13 +161,11 @@ for idx, semana in enumerate(semanas, start=1):
     dados.append({"Semana": semana, "Secção": "Viver como Cristãos", "Parte": "Estudo Bíblico de Congregação", "Responsável": responsavel_estudo})
     dados.append({"Semana": semana, "Secção": "Viver como Cristãos", "Parte": "Leitor do Estudo Bíblico", "Responsável": leitor_estudo})
 
-    # Final da Reunião
-    st.subheader("Final da Reunião")
-    num_partes_final = st.number_input(f"Número de partes finais (2-3) - {semana}", min_value=2, max_value=3, value=2, key=f"final_{semana}")
-    for i in range(num_partes_final - 1):
-        nome_parte = st.text_input(f"Nome da parte final {i+1} ({semana})", f"Parte Final {i+1}", key=f"final_nome_{semana}_{i}")
-        resp = st.selectbox(f"{nome_parte} ({semana})", nomes_visiveis, key=f"final_resp_{semana}_{i}")
-        dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": nome_parte, "Responsável": resp})
+    # Final da Reunião — apenas Oração Final
+st.subheader("Final da Reunião")
+oracao_final = st.selectbox(f"Oração Final ({semana})", nomes_visiveis, key=f"oracao_final_{semana}")
+dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": "Oração Final", "Responsável": oracao_final})
+
 
     # Estudo Bíblico de Congregação (Final)
     resp_final_estudo = st.selectbox(f"Estudo Bíblico de Congregação (Final) ({semana})", nomes_visiveis, key=f"final_estudo_{semana}")
