@@ -2,22 +2,21 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import timedelta
+from fpdf import FPDF
 
 DB_FILE = "nomes.csv"
 PARTES_FILE = "partes_reuniao.csv"
 
 # -------------------------
-# Utilitários
+# Leitura de dados
 # -------------------------
 def load_nomes():
     if os.path.exists(DB_FILE):
         df = pd.read_csv(DB_FILE)
-        # Normalizar colunas
         if "Nome" not in df.columns:
             df["Nome"] = ""
         if "Visível" not in df.columns:
             df["Visível"] = True
-        # Converter Visível para boolean
         df["Visível"] = df["Visível"].astype(str).str.lower().isin(["true", "1", "sim", "yes"])
         return df
     return pd.DataFrame(columns=["Nome", "Visível"])
@@ -28,23 +27,44 @@ def load_partes():
         return pd.DataFrame(columns=["Secção", "Parte", "TempoMin", "TempoMax"])
 
     df = pd.read_csv(PARTES_FILE)
-
-    # Normalização de nomes da secção
     df["Secção"] = df["Secção"].astype(str).str.strip().replace({
         "Empenhe-se no Ministério": "Empenha-se no Ministério",
         "Empenha-se no Ministério ": "Empenha-se no Ministério",
         "Viver como Cristaos": "Viver como Cristãos",
         "Viver como Cristãos ": "Viver como Cristãos",
     })
-
-    # Garantir tipos numéricos
     df["TempoMin"] = pd.to_numeric(df.get("TempoMin", 0), errors="coerce").fillna(0).astype(int)
     df["TempoMax"] = pd.to_numeric(df.get("TempoMax", 0), errors="coerce").fillna(0).astype(int)
-
     return df
 
 def nomes_visiveis_list(nomes_df):
     return [""] + nomes_df[nomes_df["Visível"]]["Nome"].tolist()
+
+# -------------------------
+# Exportação PDF
+# -------------------------
+def export_pdf(df):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt="Designações da Reunião", ln=True, align="C")
+    pdf.ln(5)
+
+    col_widths = [30, 45, 35, 70, 30]
+    headers = ["Semana", "Secção", "Ordem", "Parte", "Responsável"]
+    for i, header in enumerate(headers):
+        pdf.cell(col_widths[i], 8, header, border=1)
+    pdf.ln()
+
+    for _, row in df.iterrows():
+        pdf.cell(col_widths[0], 8, str(row.get("Semana", ""))[:30], border=1)
+        pdf.cell(col_widths[1], 8, str(row.get("Secção", ""))[:40], border=1)
+        pdf.cell(col_widths[2], 8, str(row.get("Ordem", ""))[:30], border=1)
+        pdf.cell(col_widths[3], 8, str(row.get("Parte", ""))[:65], border=1)
+        pdf.cell(col_widths[4], 8, str(row.get("Responsável", ""))[:28], border=1)
+        pdf.ln()
+
+    return pdf.output(dest="S").encode("latin-1")
 
 # -------------------------
 # App
@@ -66,9 +86,7 @@ dados = []
 for idx, semana in enumerate(semanas, start=1):
     st.header(f"📅 Semana {idx} - {semana}")
 
-    # -------------------------
     # Início da Reunião
-    # -------------------------
     st.subheader("Início da Reunião")
     presidente = st.selectbox(f"Presidente ({semana})", nomes_visiveis, key=f"presidente_{semana}")
     dados.append({"Semana": semana, "Secção": "Início da Reunião", "Ordem": "Abertura", "Parte": "Presidente", "Responsável": presidente})
@@ -76,21 +94,17 @@ for idx, semana in enumerate(semanas, start=1):
     oracao_inicial = st.selectbox(f"Oração Inicial ({semana})", nomes_visiveis, key=f"oracao_inicial_{semana}")
     dados.append({"Semana": semana, "Secção": "Início da Reunião", "Ordem": "Abertura", "Parte": "Oração Inicial", "Responsável": oracao_inicial})
 
-    # -------------------------
     # Tesouros da Palavra de Deus
-    # -------------------------
     st.subheader("Tesouros da Palavra de Deus")
     for parte in ["Tesouros da Palavra de Deus", "Pérolas Espirituais", "Leitura da Bíblia"]:
         responsavel = st.selectbox(f"{parte} ({semana})", nomes_visiveis, key=f"{semana}_{parte}")
         dados.append({"Semana": semana, "Secção": "Tesouros da Palavra de Deus", "Ordem": "Sequência", "Parte": parte, "Responsável": responsavel})
 
-    # -------------------------
     # Empenha-se no Ministério
-    # -------------------------
     st.subheader("Empenha-se no Ministério")
     ministerio_cfg = partes_cfg[partes_cfg["Secção"] == "Empenha-se no Ministério"].copy()
 
-    # Garantir que Discurso (se existir) fica 5/5
+    # Se existir Discurso no CSV, força 5/5 por consistência
     if "Discurso" in ministerio_cfg["Parte"].unique():
         ministerio_cfg.loc[ministerio_cfg["Parte"] == "Discurso", ["TempoMin", "TempoMax"]] = [5, 5]
 
@@ -136,78 +150,38 @@ for idx, semana in enumerate(semanas, start=1):
                 "Responsável": f"{resp1} / {resp2}"
             })
 
-    # -------------------------
-    # Viver como Cristãos
-    # -------------------------
+    # Viver como Cristãos (sem especiais; 1 ou 2 partes variáveis, tempo 5–15)
     st.subheader("Viver como Cristãos")
     viver_cfg = partes_cfg[partes_cfg["Secção"] == "Viver como Cristãos"].copy()
 
-    # Partes especiais (sem responsável) — só visíveis se ativadas
-    partes_especiais = ["Atualização Corpo Governante", "Realizações da Organização"]
-    mostrar_especiais = st.checkbox(f"Ativar partes especiais ({semana})", key=f"{semana}_mostrar_especiais")
+    opcoes_variaveis = ["Nenhuma"] + sorted([
+        p for p in viver_cfg["Parte"].unique().tolist()
+        if p != "Estudo Bíblico de Congregação"
+    ])
 
-    # Opções disponíveis (exclui Estudo Bíblico fixo)
-    todas_partes = viver_cfg["Parte"].unique().tolist()
-    partes_normais = [p for p in todas_partes if p not in partes_especiais and p != "Estudo Bíblico de Congregação"]
-    opcoes = partes_normais + (partes_especiais if mostrar_especiais else [])
-
-    # Parte 1 (obrigatória se escolhida)
-    parte1 = st.selectbox(f"Parte 1 ({semana})", ["Nenhuma"] + opcoes, key=f"{semana}_viver_parte1")
-    tempo1 = None
-    if parte1 != "Nenhuma":
-        rows1 = viver_cfg[viver_cfg["Parte"] == parte1]
-        if rows1.empty:
-            st.warning(f"A parte '{parte1}' não está configurada no CSV em 'Viver como Cristãos'.")
-        else:
-            row1 = rows1.iloc[0]
-            tempo1 = st.number_input(
-                f"Tempo para {parte1} ({semana})",
-                min_value=int(row1["TempoMin"]),
-                max_value=int(row1["TempoMax"]),
-                value=int(row1["TempoMin"]),
-                key=f"{semana}_viver_tempo1"
+    for i in range(2):
+        parte_var = st.selectbox(f"Parte variável {i+1} ({semana})", opcoes_variaveis, key=f"{semana}_viver_parte_{i}")
+        if parte_var != "Nenhuma":
+            rows_v = viver_cfg[viver_cfg["Parte"] == parte_var]
+            if rows_v.empty:
+                st.warning(f"A parte '{parte_var}' não está configurada no CSV em 'Viver como Cristãos'.")
+                continue
+            row_v = rows_v.iloc[0]
+            tempo = st.number_input(
+                f"Tempo para {parte_var} ({semana})",
+                min_value=5,
+                max_value=15,
+                value=max(5, int(row_v["TempoMin"])),
+                key=f"{semana}_viver_tempo_{i}"
             )
-            responsavel1 = "" if parte1 in partes_especiais else st.selectbox(
-                f"{parte1} - Responsável ({semana})",
-                nomes_visiveis,
-                key=f"{semana}_viver_resp1"
-            )
+            resp = st.selectbox(f"{parte_var} - Responsável ({semana})", nomes_visiveis, key=f"{semana}_viver_resp_{i}")
             dados.append({
                 "Semana": semana,
                 "Secção": "Viver como Cristãos",
-                "Ordem": "Parte variável 1",
-                "Parte": f"{parte1} ({tempo1} min)",
-                "Responsável": responsavel1
+                "Ordem": f"Parte variável {i+1}",
+                "Parte": f"{parte_var} ({tempo} min)",
+                "Responsável": resp
             })
-
-    # Parte 2 — só aparece se tempo1 < 15
-    if tempo1 is not None and tempo1 < 15:
-        parte2 = st.selectbox(f"Parte 2 ({semana})", ["Nenhuma"] + opcoes, key=f"{semana}_viver_parte2")
-        if parte2 != "Nenhuma":
-            rows2 = viver_cfg[viver_cfg["Parte"] == parte2]
-            if rows2.empty:
-                st.warning(f"A parte '{parte2}' não está configurada no CSV em 'Viver como Cristãos'.")
-            else:
-                row2 = rows2.iloc[0]
-                tempo2 = st.number_input(
-                    f"Tempo para {parte2} ({semana})",
-                    min_value=int(row2["TempoMin"]),
-                    max_value=int(row2["TempoMax"]),
-                    value=int(row2["TempoMin"]),
-                    key=f"{semana}_viver_tempo2"
-                )
-                responsavel2 = "" if parte2 in partes_especiais else st.selectbox(
-                    f"{parte2} - Responsável ({semana})",
-                    nomes_visiveis,
-                    key=f"{semana}_viver_resp2"
-                )
-                dados.append({
-                    "Semana": semana,
-                    "Secção": "Viver como Cristãos",
-                    "Ordem": "Parte variável 2",
-                    "Parte": f"{parte2} ({tempo2} min)",
-                    "Responsável": responsavel2
-                })
 
     # Fixas no fim
     resp_estudo = st.selectbox(
@@ -236,20 +210,19 @@ for idx, semana in enumerate(semanas, start=1):
         "Responsável": resp_leitor
     })
 
-    # -------------------------
     # Final da Reunião
-    # -------------------------
     st.subheader("Final da Reunião")
     oracao_final = st.selectbox(f"Oração Final ({semana})", nomes_visiveis, key=f"oracao_final_{semana}")
     dados.append({"Semana": semana, "Secção": "Final da Reunião", "Ordem": "Encerramento", "Parte": "Oração Final", "Responsável": oracao_final})
 
 # -------------------------
-# Exportação
+# Exportação (CSV e PDF)
 # -------------------------
 partes_df_final = pd.DataFrame(dados)
 
 st.subheader("Exportação")
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
+
 with col1:
     if st.button("💾 Guardar designações em CSV"):
         partes_df_final.to_csv("partes.csv", index=False)
@@ -261,4 +234,13 @@ with col2:
         data=partes_df_final.to_csv(index=False),
         file_name="partes.csv",
         mime="text/csv",
+    )
+
+with col3:
+    pdf_bytes = export_pdf(partes_df_final)
+    st.download_button(
+        "📄 Exportar PDF",
+        data=pdf_bytes,
+        file_name="partes.pdf",
+        mime="application/pdf",
     )
