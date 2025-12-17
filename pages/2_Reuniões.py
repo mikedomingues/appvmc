@@ -21,11 +21,56 @@ def to_latin1(text):
     return str(text).encode("latin-1", "replace").decode("latin-1")
 
 def export_pdf(df):
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    # Landscape para mais espaço horizontal
+    pdf = FPDF(orientation="L", unit="mm", format="A4")
+    pdf.set_auto_page_break(auto=False)  # sem quebras automáticas
     pdf.add_page()
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(190, 12, to_latin1("Designações da Reunião Vida e Ministério Cristãos"), ln=True, align="C")
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(270, 12, to_latin1("Designações da Reunião Vida e Ministério Cristãos"), ln=True, align="C")
+
+    semanas_ordenadas = list(df["Semana"].unique())
+    for semana in semanas_ordenadas:
+        grupo_semana = df[df["Semana"] == semana]
+
+        pdf.ln(6)
+        pdf.set_font("Arial", "B", 12)
+        pdf.set_fill_color(200, 200, 200)
+        pdf.cell(270, 8, to_latin1(f"SEMANA - {semana}"), ln=True, align="L", fill=True)
+
+        ordem_secoes = [
+            "Início da Reunião",
+            "Tesouros da Palavra de Deus",
+            "Empenha-se no Ministério",
+            "Viver como Cristãos",
+            "Final da Reunião",
+        ]
+
+        for secao in ordem_secoes:
+            grupo_secao = grupo_semana[grupo_semana["Secção"] == secao]
+            if grupo_secao.empty:
+                continue
+
+            pdf.set_font("Arial", "B", 10)
+            pdf.set_fill_color(220, 220, 220)
+            pdf.cell(270, 6, to_latin1(secao), ln=True, align="L", fill=True)
+
+            # Cabeçalho da tabela
+            pdf.set_font("Arial", "B", 8)
+            pdf.cell(120, 6, "Parte", 1)
+            pdf.cell(150, 6, "Responsável", 1)
+            pdf.ln()
+
+            # Linhas
+            pdf.set_font("Arial", "", 8)
+            for _, row in grupo_secao.iterrows():
+                parte = to_latin1(row["Parte"])
+                responsavel = to_latin1(row["Responsável"])
+                pdf.cell(120, 6, parte, 1)
+                pdf.cell(150, 6, responsavel, 1)
+                pdf.ln()
+
+    return pdf.output(dest="S").encode("latin-1")
+)
 
     # Agrupar por semana (ordem pela lista original, se possível)
     semanas_ordenadas = list(df["Semana"].unique())
