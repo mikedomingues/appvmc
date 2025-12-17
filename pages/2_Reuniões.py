@@ -77,34 +77,46 @@ for idx, semana in enumerate(semanas, start=1):
         responsavel = st.selectbox(f"{parte} ({semana})", nomes_visiveis, key=f"{semana}_{parte}")
         dados.append({"Semana": semana, "Secção": "Tesouros da Palavra de Deus", "Parte": parte, "Responsável": responsavel})
 
-    # Empenha-se no Ministério (flexível)
-    st.subheader("Empenha-se no Ministério")
-    ministerio_partes = partes_cfg[partes_cfg["Secção"] == "Empenha-se no Ministério"]
+   # Empenha-se no Ministério (flexível)
+st.subheader("Empenha-se no Ministério")
+ministerio_partes = partes_cfg[partes_cfg["Secção"] == "Empenha-se no Ministério"]
 
-    num_ministerio = st.number_input(f"Número de partes ({semana})", min_value=1, max_value=4, value=3, key=f"num_ministerio_{semana}")
-    for i in range(num_ministerio):
-        parte_escolhida = st.selectbox(
-            f"Parte {i+1} ({semana})",
-            ministerio_partes["Parte"].unique(),
-            key=f"{semana}_ministerio_parte_{i}"
-        )
-        row = ministerio_partes[ministerio_partes["Parte"] == parte_escolhida].iloc[0]
-        tempo = st.number_input(
-            f"Tempo para {parte_escolhida} ({semana})",
-            min_value=int(row["TempoMin"]),
-            max_value=int(row["TempoMax"]),
-            value=int(row["TempoMin"]),
-            key=f"{semana}_ministerio_tempo_{i}"
-        )
-        resp1 = st.selectbox(f"{parte_escolhida} - Designado 1 ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_1_{i}")
-        resp2 = st.selectbox(f"{parte_escolhida} - Designado 2 ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_2_{i}")
+num_ministerio = st.number_input(f"Número de partes ({semana})", min_value=1, max_value=4, value=3, key=f"num_ministerio_{semana}")
+for i in range(num_ministerio):
+    parte_escolhida = st.selectbox(
+        f"Parte {i+1} ({semana})",
+        ministerio_partes["Parte"].unique(),
+        key=f"{semana}_ministerio_parte_{i}"
+    )
+    row = ministerio_partes[ministerio_partes["Parte"] == parte_escolhida].iloc[0]
+    tempo = st.number_input(
+        f"Tempo para {parte_escolhida} ({semana})",
+        min_value=int(row["TempoMin"]),
+        max_value=int(row["TempoMax"]),
+        value=int(row["TempoMin"]),
+        key=f"{semana}_ministerio_tempo_{i}"
+    )
 
+    if parte_escolhida == "Discurso":
+        resp = st.selectbox(f"{parte_escolhida} - Responsável ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_resp_{i}")
         dados.append({
             "Semana": semana,
             "Secção": "Empenha-se no Ministério",
+            "Ordem": f"Parte {i+1}",
+            "Parte": f"{parte_escolhida} ({tempo} min)",
+            "Responsável": resp
+        })
+    else:
+        resp1 = st.selectbox(f"{parte_escolhida} - Designado 1 ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_1_{i}")
+        resp2 = st.selectbox(f"{parte_escolhida} - Designado 2 ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_2_{i}")
+        dados.append({
+            "Semana": semana,
+            "Secção": "Empenha-se no Ministério",
+            "Ordem": f"Parte {i+1}",
             "Parte": f"{parte_escolhida} ({tempo} min)",
             "Responsável": f"{resp1} / {resp2}"
         })
+
 
     # Viver como Cristãos (flexível)
     st.subheader("Viver como Cristãos")
