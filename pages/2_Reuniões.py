@@ -134,86 +134,78 @@ for idx, semana in enumerate(semanas, start=1):
     # -------------------------
     # Viver como Cristãos
     # -------------------------
-    st.subheader("Viver como Cristãos")
-    viver_cfg = partes_cfg[partes_cfg["Secção"] == "Viver como Cristãos"]
+       st.subheader("Viver como Cristãos")
+    viver_cfg = partes_cfg[partes_cfg["Secção"] == "Viver como Cristãos"].copy()
 
-    # Partes fixas (não vêm do CSV)
-    ESTUDO_FIXO_TEMPO = 30
-    PARTES_FIXAS = [
-        {"nome": "Estudo Bíblico de Congregação", "tempo": ESTUDO_FIXO_TEMPO},
-        {"nome": "Leitor do Estudo Bíblico", "tempo": None},  # sem tempo
-    ]
+    # Partes especiais (sem responsável)
+    partes_especiais = ["Atualização Corpo Governante", "Realizações da Organização"]
+    mostrar_especiais = st.checkbox(f"Ativar partes especiais ({semana})", key=f"{semana}_mostrar_especiais")
 
-    # Partes variáveis disponíveis (exclui as fixas e o leitor)
-    nomes_fixos = {pf["nome"] for pf in PARTES_FIXAS}
-    opcoes_variaveis = sorted([
-        p for p in viver_cfg["Parte"].unique().tolist()
-        if p not in nomes_fixos
-    ])
+    # Lista de partes disponíveis
+    todas_partes = viver_cfg["Parte"].unique().tolist()
+    partes_normais = [p for p in todas_partes if p not in partes_especiais and p != "Estudo Bíblico de Congregação"]
+    opcoes = partes_normais + (partes_especiais if mostrar_especiais else [])
 
-    # Permitir até 2 partes variáveis; incluir "Nenhuma" como opção
-    opcoes_select = ["Nenhuma"] + opcoes_variaveis
-
-    for i in range(2):
-        parte_var = st.selectbox(
-            f"Parte variável {i+1} ({semana})",
-            opcoes_select,
-            key=f"{semana}_viver_parte_{i}"
+    # Parte 1
+    parte1 = st.selectbox(f"Parte 1 ({semana})", ["Nenhuma"] + opcoes, key=f"{semana}_viver_parte1")
+    tempo1 = None
+    if parte1 != "Nenhuma":
+        row1 = viver_cfg[viver_cfg["Parte"] == parte1].iloc[0]
+        tempo1 = st.number_input(
+            f"Tempo para {parte1} ({semana})",
+            min_value=int(row1["TempoMin"]),
+            max_value=int(row1["TempoMax"]),
+            value=int(row1["TempoMin"]),
+            key=f"{semana}_viver_tempo1"
         )
+        if parte1 in partes_especiais:
+            responsavel1 = ""
+        else:
+            responsavel1 = st.selectbox(f"{parte1} - Responsável ({semana})", nomes_visiveis, key=f"{semana}_viver_resp1")
+        dados.append({
+            "Semana": semana,
+            "Secção": "Viver como Cristãos",
+            "Ordem": "Parte variável 1",
+            "Parte": f"{parte1} ({tempo1} min)",
+            "Responsável": responsavel1
+        })
 
-        if parte_var != "Nenhuma":
-            rows = viver_cfg[viver_cfg["Parte"] == parte_var]
-            if rows.empty:
-                st.warning(f"A parte '{parte_var}' não está configurada no CSV em 'Viver como Cristãos'.")
-                continue
-            row = rows.iloc[0]
-
-            # Tempo variável ou fixo conforme CSV
-            if int(row["TempoMin"]) == int(row["TempoMax"]):
-                tempo = int(row["TempoMin"])
-            else:
-                tempo = st.number_input(
-                    f"Tempo para {parte_var} ({semana})",
-                    min_value=int(row["TempoMin"]),
-                    max_value=int(row["TempoMax"]),
-                    value=int(row["TempoMin"]),
-                    key=f"{semana}_viver_tempo_{i}"
-                )
-
-            resp = st.selectbox(
-                f"{parte_var} - Responsável ({semana})",
-                nomes_visiveis,
-                key=f"{semana}_{parte_var}_resp_{i}"
+    # Parte 2 (só aparece se tempo1 < 15)
+    if tempo1 is not None and tempo1 < 15:
+        parte2 = st.selectbox(f"Parte 2 ({semana})", ["Nenhuma"] + opcoes, key=f"{semana}_viver_parte2")
+        if parte2 != "Nenhuma":
+            row2 = viver_cfg[viver_cfg["Parte"] == parte2].iloc[0]
+            tempo2 = st.number_input(
+                f"Tempo para {parte2} ({semana})",
+                min_value=int(row2["TempoMin"]),
+                max_value=int(row2["TempoMax"]),
+                value=int(row2["TempoMin"]),
+                key=f"{semana}_viver_tempo2"
             )
-
-            parte_label = f"{parte_var}" + (f" ({tempo} min)" if tempo is not None else "")
+            if parte2 in partes_especiais:
+                responsavel2 = ""
+            else:
+                responsavel2 = st.selectbox(f"{parte2} - Responsável ({semana})", nomes_visiveis, key=f"{semana}_viver_resp2")
             dados.append({
                 "Semana": semana,
                 "Secção": "Viver como Cristãos",
-                "Ordem": f"Parte variável {i+1}",
-                "Parte": parte_label,
-                "Responsável": resp
+                "Ordem": "Parte variável 2",
+                "Parte": f"{parte2} ({tempo2} min)",
+                "Responsável": responsavel2
             })
 
-    # Partes fixas no fim
-    resp_estudo = st.selectbox(
-        f"Estudo Bíblico de Congregação ({semana})",
-        nomes_visiveis,
-        key=f"{semana}_estudo_biblico"
-    )
+    # Parte fixa 1: Estudo Bíblico
+    resp_estudo = st.selectbox(f"Estudo Bíblico de Congregação ({semana})", nomes_visiveis, key=f"{semana}_estudo_biblico")
     dados.append({
         "Semana": semana,
         "Secção": "Viver como Cristãos",
         "Ordem": "Parte fixa 1",
-        "Parte": f"Estudo Bíblico de Congregação ({ESTUDO_FIXO_TEMPO} min)",
+        "Parte": "Estudo Bíblico de Congregação (30 min)",
         "Responsável": resp_estudo
     })
 
-    resp_leitor = st.selectbox(
-        f"Leitor do Estudo Bíblico ({semana})",
-        nomes_visiveis,
-        key=f"{semana}_leitor_estudo"
-    )
+    # Parte fixa 2: Leitor
+    resp_leitor = st.selectbox(f"Leitor do Estudo Bíblico ({semana})", nomes_visiveis, key=f"{semana}_leitor_estudo")
     dados.append({
         "Semana": semana,
         "Secção": "Viver como Cristãos",
@@ -221,6 +213,7 @@ for idx, semana in enumerate(semanas, start=1):
         "Parte": "Leitor do Estudo Bíblico",
         "Responsável": resp_leitor
     })
+
 
     # -------------------------
     # Final da Reunião
