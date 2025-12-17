@@ -22,17 +22,32 @@ def load_nomes():
         return pd.DataFrame(columns=["Nome", "Visível"])
 
 def load_partes():
-    """Carrega partes e tempos do CSV."""
-    if os.path.exists(PARTES_FILE):
-        df = pd.read_csv(PARTES_FILE)
-        # Normalizar nome da secção para evitar typos
-        df["Secção"] = df["Secção"].replace({
-            "Empanha-se no Ministério": "Empenha-se no Ministério",
-            "Empenhe-se no Ministério": "Empenha-se no Ministério",
-        })
-        return df
-    else:
+    """Carrega partes e tempos do CSV com validação e normalização."""
+    if not os.path.exists(PARTES_FILE):
+        st.warning("Faltou o ficheiro partes_reuniao.csv. Cria-o na raiz do projeto.")
         return pd.DataFrame(columns=["Secção", "Parte", "TempoMin", "TempoMax"])
+
+    df = pd.read_csv(PARTES_FILE)
+
+    # Validação mínima de colunas
+    required_cols = {"Secção", "Parte", "TempoMin", "TempoMax"}
+    if not required_cols.issubset(set(df.columns)):
+        st.error(f"O CSV {PARTES_FILE} não tem as colunas corretas. Esperado: {', '.join(required_cols)}.")
+        return pd.DataFrame(columns=["Secção", "Parte", "TempoMin", "TempoMax"])
+
+    # Normalização de nomes da secção (corrigir typos comuns)
+    df["Secção"] = df["Secção"].replace({
+        "Empanha-se no Ministério": "Empenha-se no Ministério",
+        "Empenhe-se no Ministério": "Empenha-se no Ministério",
+        "Empenha-se no ministério": "Empenha-se no Ministério",
+        "Empenha-se no Ministério ": "Empenha-se no Ministério",
+    })
+
+    # Garantir tipos numéricos
+    df["TempoMin"] = pd.to_numeric(df["TempoMin"], errors="coerce").fillna(0).astype(int)
+    df["TempoMax"] = pd.to_numeric(df["TempoMax"], errors="coerce").fillna(0).astype(int)
+
+    return df
 
 # -------------------------
 # Interface
@@ -47,26 +62,28 @@ num_semanas = st.radio("Número de semanas:", [4, 5], index=0)
 semanas = [(primeira_semana + timedelta(weeks=i)).strftime("%d %b") for i in range(num_semanas)]
 
 nomes_df = load_nomes()
-partes_df = load_partes()
+partes_cfg = load_partes()
 
 # Lista de nomes visíveis + entrada vazia para permitir não preencher
 nomes_visiveis = [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist()
+
+# Feedback se não há partes
+if partes_cfg.empty:
+    st.warning("Não há partes configuradas. Verifica o ficheiro partes_reuniao.csv.")
+    st.stop()
 
 dados = []
 
 for idx, semana in enumerate(semanas, start=1):
     st.header(f"📅 Semana {idx} - {semana}")
 
-    # Início da Reunião
+    # Início da Reunião (sem comentários iniciais)
     st.subheader("Início da Reunião")
     presidente = st.selectbox(f"Presidente ({semana})", nomes_visiveis, key=f"presidente_{semana}")
     dados.append({"Semana": semana, "Secção": "Início da Reunião", "Parte": "Presidente", "Responsável": presidente})
 
     oracao_inicial = st.selectbox(f"Oração Inicial ({semana})", nomes_visiveis, key=f"oracao_inicial_{semana}")
     dados.append({"Semana": semana, "Secção": "Início da Reunião", "Parte": "Oração Inicial", "Responsável": oracao_inicial})
-
-    comentarios = st.text_input(f"Comentários introdutórios (1 min) ({semana})", key=f"comentarios_{semana}")
-    dados.append({"Semana": semana, "Secção": "Início da Reunião", "Parte": "Comentários introdutórios 1 min", "Responsável": comentarios})
 
     # Tesouros da Palavra de Deus
     st.subheader("Tesouros da Palavra de Deus")
@@ -76,52 +93,66 @@ for idx, semana in enumerate(semanas, start=1):
 
     # Empenha-se no Ministério (dinâmico via CSV)
     st.subheader("Empenha-se no Ministério")
-    ministerio_partes = partes_df[partes_df["Secção"] == "Empenha-se no Ministério"]
+    ministerio_partes = partes_cfg[partes_cfg["Secção"] == "Empenha-se no Ministério"]
 
-    for _, row in ministerio_partes.iterrows():
-        tempo = st.number_input(
-            f"{row['Parte']} - Tempo ({semana})",
-            min_value=int(row["TempoMin"]),
-            max_value=int(row["TempoMax"]),
-            value=int(row["TempoMin"]),
-            key=f"{semana}_{row['Parte']}_tempo"
-        )
-        resp1 = st.selectbox(f"{row['Parte']} - Designado 1 ({semana})", nomes_visiveis, key=f"{semana}_{row['Parte']}_1")
-        resp2 = st.selectbox(f"{row['Parte']} - Designado 2 ({semana})", nomes_visiveis, key=f"{semana}_{row['Parte']}_2")
+    if ministerio_partes.empty:
+        st.info("Nenhuma parte configurada para 'Empenha-se no Ministério' no CSV.")
+    else:
+        for _, row in ministerio_partes.iterrows():
+            parte_nome = str(row["Parte"])
+            tempo_min = int(row["TempoMin"])
+            tempo_max = int(row["TempoMax"])
+            default = tempo_min if tempo_min <= tempo_max else tempo_max
 
-        dados.append({
-            "Semana": semana,
-            "Secção": "Empenha-se no Ministério",
-            "Parte": f"{row['Parte']} ({tempo} min)",
-            "Responsável": f"{resp1} / {resp2}"
-        })
+            tempo = st.number_input(
+                f"{parte_nome} - Tempo ({semana})",
+                min_value=tempo_min,
+                max_value=tempo_max,
+                value=default,
+                key=f"{semana}_{parte_nome}_tempo"
+            )
+            # Duas designações (par) para estas partes
+            resp1 = st.selectbox(f"{parte_nome} - Designado 1 ({semana})", nomes_visiveis, key=f"{semana}_{parte_nome}_1")
+            resp2 = st.selectbox(f"{parte_nome} - Designado 2 ({semana})", nomes_visiveis, key=f"{semana}_{parte_nome}_2")
+
+            dados.append({
+                "Semana": semana,
+                "Secção": "Empenha-se no Ministério",
+                "Parte": f"{parte_nome} ({tempo} min)",
+                "Responsável": f"{resp1} / {resp2}"
+            })
 
     # Viver como Cristãos (dinâmico via CSV)
     st.subheader("Viver como Cristãos")
-    viver_partes = partes_df[partes_df["Secção"] == "Viver como Cristãos"]
+    viver_partes = partes_cfg[partes_cfg["Secção"] == "Viver como Cristãos"]
 
-    for _, row in viver_partes.iterrows():
-        tempo = st.number_input(
-            f"{row['Parte']} - Tempo ({semana})",
-            min_value=int(row["TempoMin"]),
-            max_value=int(row["TempoMax"]),
-            value=int(row["TempoMin"]),
-            key=f"{semana}_{row['Parte']}_tempo"
-        )
-        resp = st.selectbox(f"{row['Parte']} ({semana})", nomes_visiveis, key=f"{semana}_{row['Parte']}_resp")
+    if viver_partes.empty:
+        st.info("Nenhuma parte configurada para 'Viver como Cristãos' no CSV.")
+    else:
+        for _, row in viver_partes.iterrows():
+            parte_nome = str(row["Parte"])
+            tempo_min = int(row["TempoMin"])
+            tempo_max = int(row["TempoMax"])
+            default = tempo_min if tempo_min <= tempo_max else tempo_max
 
-        dados.append({
-            "Semana": semana,
-            "Secção": "Viver como Cristãos",
-            "Parte": f"{row['Parte']} ({tempo} min)",
-            "Responsável": resp
-        })
+            tempo = st.number_input(
+                f"{parte_nome} - Tempo ({semana})",
+                min_value=tempo_min,
+                max_value=tempo_max,
+                value=default,
+                key=f"{semana}_{parte_nome}_tempo"
+            )
+            resp = st.selectbox(f"{parte_nome} ({semana})", nomes_visiveis, key=f"{semana}_{parte_nome}_resp")
 
-    # Final da Reunião
+            dados.append({
+                "Semana": semana,
+                "Secção": "Viver como Cristãos",
+                "Parte": f"{parte_nome} ({tempo} min)",
+                "Responsável": resp
+            })
+
+    # Final da Reunião (sem comentários finais)
     st.subheader("Final da Reunião")
-    comentarios_finais = st.text_input(f"Comentários finais (3 min) ({semana})", key=f"comentarios_finais_{semana}")
-    dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": "Comentários finais 3 min", "Responsável": comentarios_finais})
-
     oracao_final = st.selectbox(f"Oração Final ({semana})", nomes_visiveis, key=f"oracao_final_{semana}")
     dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": "Oração Final", "Responsável": oracao_final})
 
