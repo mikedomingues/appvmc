@@ -97,52 +97,53 @@ for idx, semana in enumerate(semanas, start=1):
             })
 
     st.subheader("Viver como Cristãos")
-viver_partes = partes_cfg[partes_cfg["Secção"] == "Viver como Cristãos"]
+    viver_partes = partes_cfg[partes_cfg["Secção"] == "Viver como Cristãos"]
 
-# Primeiro: partes variáveis (1 ou 2)
-num_viver = st.number_input(f"Número de partes variáveis ({semana})", min_value=1, max_value=2, value=1, key=f"num_viver_{semana}")
+    # Partes variáveis (1 ou 2)
+    num_viver = st.number_input(f"Número de partes variáveis ({semana})", min_value=1, max_value=2, value=1, key=f"num_viver_{semana}")
+    for i in range(num_viver):
+        parte_escolhida = st.selectbox(
+            f"Parte variável {i+1} ({semana})",
+            ["Necessidades Locais", "Realizações da Organização", "Atualização Corpo Governante"],
+            key=f"{semana}_viver_parte_{i}"
+        )
+        row = viver_partes[viver_partes["Parte"] == parte_escolhida].iloc[0]
+        tempo = st.number_input(
+            f"Tempo para {parte_escolhida} ({semana})",
+            min_value=int(row["TempoMin"]),
+            max_value=int(row["TempoMax"]),
+            value=int(row["TempoMin"]),
+            key=f"{semana}_viver_tempo_{i}"
+        )
+        resp = st.selectbox(f"{parte_escolhida} - Responsável ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_resp_{i}")
+        dados.append({
+            "Semana": semana,
+            "Secção": "Viver como Cristãos",
+            "Ordem": f"Parte variável {i+1}",
+            "Parte": f"{parte_escolhida} ({tempo} min)",
+            "Responsável": resp
+        })
 
-for i in range(num_viver):
-    parte_escolhida = st.selectbox(f"Parte variável {i+1} ({semana})", 
-                                   ["Necessidades Locais", "Realizações da Organização", "Atualização Corpo Governante"], 
-                                   key=f"{semana}_viver_parte_{i}")
-    row = viver_partes[viver_partes["Parte"] == parte_escolhida].iloc[0]
-    tempo = st.number_input(
-        f"Tempo para {parte_escolhida} ({semana})",
-        min_value=int(row["TempoMin"]),
-        max_value=int(row["TempoMax"]),
-        value=int(row["TempoMin"]),
-        key=f"{semana}_viver_tempo_{i}"
-    )
-    resp = st.selectbox(f"{parte_escolhida} - Responsável ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_resp_{i}")
+    # Parte fixa 1: Estudo Bíblico
+    resp_estudo = st.selectbox(f"Estudo Bíblico de Congregação ({semana})", nomes_visiveis, key=f"{semana}_estudo_biblico")
     dados.append({
         "Semana": semana,
         "Secção": "Viver como Cristãos",
-        "Ordem": f"Parte variável {i+1}",
-        "Parte": f"{parte_escolhida} ({tempo} min)",
-        "Responsável": resp
+        "Ordem": "Parte fixa 1",
+        "Parte": "Estudo Bíblico de Congregação (30 min)",
+        "Responsável": resp_estudo
     })
 
-# Depois: partes fixas
-# Estudo Bíblico
-resp_estudo = st.selectbox(f"Estudo Bíblico de Congregação ({semana})", nomes_visiveis, key=f"{semana}_estudo_biblico")
-dados.append({
-    "Semana": semana,
-    "Secção": "Viver como Cristãos",
-    "Ordem": "Parte fixa 1",
-    "Parte": "Estudo Bíblico de Congregação (30 min)",
-    "Responsável": resp_estudo
-})
+    # Parte fixa 2: Leitor
+    resp_leitor = st.selectbox(f"Leitor do Estudo Bíblico ({semana})", nomes_visiveis, key=f"{semana}_leitor_estudo")
+    dados.append({
+        "Semana": semana,
+        "Secção": "Viver como Cristãos",
+        "Ordem": "Parte fixa 2",
+        "Parte": "Leitor do Estudo Bíblico (0 min)",
+        "Responsável": resp_leitor
+    })
 
-# Leitor
-resp_leitor = st.selectbox(f"Leitor do Estudo Bíblico ({semana})", nomes_visiveis, key=f"{semana}_leitor_estudo")
-dados.append({
-    "Semana": semana,
-    "Secção": "Viver como Cristãos",
-    "Ordem": "Parte fixa 2",
-    "Parte": "Leitor do Estudo Bíblico (0 min)",
-    "Responsável": resp_leitor
-})
 
 
     st.subheader("Final da Reunião")
