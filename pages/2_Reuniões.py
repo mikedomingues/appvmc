@@ -26,82 +26,46 @@ def to_latin1(text):
     return str(text).encode("latin-1", "replace").decode("latin-1")
 
 # -------------------------
-# Exportação PDF (paisagem, fonte compacta, uma só página)
+# Exportação PDF (Vertical, uma só página)
 # -------------------------
 def export_pdf(df):
     pdf = FPDF(orientation="L", unit="mm", format="A4")
     pdf.set_auto_page_break(auto=False)
     pdf.add_page()
 
-    # Cabeçalho geral
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(270, 8, to_latin1("Designações da Reunião Vida e Ministério Cristãos"), ln=True, align="C")
+    pdf.cell(270, 8, to_latin1("Reunião Vida e Ministério Cristãos"), ln=True, align="C")
 
-    # Ordem das semanas conforme interface
     semanas_ordenadas = list(pd.unique(df["Semana"]))
-
-    # Ordem fixa das secções
-    ordem_secoes = [
-        "Início da Reunião",
+    partes_fixas = [
+        "Presidente",
+        "Oração Inicial",
         "Tesouros da Palavra de Deus",
+        "Pérolas Espirituais",
+        "Leitura da Bíblia",
         "Empenha-se no Ministério",
         "Viver como Cristãos",
-        "Final da Reunião",
+        "Estudo Bíblico de Congregação",
+        "Leitor do Estudo Bíblico",
+        "Oração Final"
     ]
 
+    # Cabeçalho
+    pdf.set_font("Arial", "B", 8)
+    pdf.cell(40, 6, "Parte", 1)
     for semana in semanas_ordenadas:
-        grupo_semana = df[df["Semana"] == semana]
+        pdf.cell(40, 6, to_latin1(semana), 1)
+    pdf.ln()
 
-        # Título da semana
-        pdf.ln(3)
-        pdf.set_font("Arial", "B", 10)
-        pdf.set_fill_color(200, 200, 200)
-        pdf.cell(270, 6, to_latin1(f"SEMANA - {semana}"), ln=True, align="L", fill=True)
-
-        for secao in ordem_secoes:
-            grupo_secao = grupo_semana[grupo_semana["Secção"] == secao]
-            if grupo_secao.empty:
-                continue
-
-            # Início da Reunião → mostrar direto
-            if secao == "Início da Reunião":
-                presidente_vals = grupo_secao[grupo_secao["Parte"] == "Presidente"]["Responsável"].values
-                oracao_vals = grupo_secao[grupo_secao["Parte"] == "Oração Inicial"]["Responsável"].values
-                presidente = presidente_vals[0] if len(presidente_vals) > 0 else ""
-                oracao = oracao_vals[0] if len(oracao_vals) > 0 else ""
-                pdf.set_font("Arial", "", 8)
-                pdf.cell(270, 5, to_latin1(f"Presidente: {presidente}"), ln=True)
-                pdf.cell(270, 5, to_latin1(f"Oração Inicial: {oracao}"), ln=True)
-                continue
-
-            # Final da Reunião → mostrar apenas Oração Final
-            if secao == "Final da Reunião":
-                oracao_final_vals = grupo_secao[grupo_secao["Parte"] == "Oração Final"]["Responsável"].values
-                oracao_final = oracao_final_vals[0] if len(oracao_final_vals) > 0 else ""
-                pdf.set_font("Arial", "", 8)
-                pdf.cell(270, 5, to_latin1(f"Oração Final: {oracao_final}"), ln=True)
-                continue
-
-            # Secções normais com tabela
-            pdf.set_font("Arial", "B", 8)
-            pdf.set_fill_color(220, 220, 220)
-            pdf.cell(270, 5, to_latin1(secao), ln=True, align="L", fill=True)
-
-            pdf.set_font("Arial", "B", 7)
-            pdf.cell(120, 5, to_latin1("Parte"), 1)
-            pdf.cell(150, 5, to_latin1("Responsável"), 1)
-            pdf.ln()
-
-            pdf.set_font("Arial", "", 7)
-            for _, row in grupo_secao.iterrows():
-                parte = str(row["Parte"])
-                # Evitar duplicar campos já tratados
-                if parte in ["Presidente", "Oração Inicial", "Oração Final"]:
-                    continue
-                responsavel = str(row["Responsável"])
-                pdf.cell(120, 5, to_latin1(parte), 1)
-                pdf.cell(150, 5, to_latin1(responsavel), 1)
-                pdf.ln()
+    # Linhas
+    for parte in partes_fixas:
+        pdf.set_font("Arial", "", 7)
+        pdf.cell(40, 6, to_latin1(parte), 1)
+        for semana in semanas_ordenadas:
+            grupo = df[(df["Semana"] == semana) & (df["Parte"] == parte)]
+            responsavel = grupo["Responsável"].values[0] if not grupo.empty else ""
+            pdf.cell(40, 6, to_latin1(responsavel), 1)
+        pdf.ln()
 
     return pdf.output(dest="S").encode("latin-1")
 
