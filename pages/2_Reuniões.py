@@ -29,18 +29,10 @@ def load_partes():
 
     df = pd.read_csv(PARTES_FILE)
 
-    # Validação mínima de colunas
-    required_cols = {"Secção", "Parte", "TempoMin", "TempoMax"}
-    if not required_cols.issubset(set(df.columns)):
-        st.error(f"O CSV {PARTES_FILE} não tem as colunas corretas. Esperado: {', '.join(required_cols)}.")
-        return pd.DataFrame(columns=["Secção", "Parte", "TempoMin", "TempoMax"])
-
-    # Normalização de nomes da secção (corrigir typos comuns)
+    # Normalização de nomes da secção
     df["Secção"] = df["Secção"].replace({
-        "Empanha-se no Ministério": "Empenha-se no Ministério",
         "Empenhe-se no Ministério": "Empenha-se no Ministério",
-        "Empenha-se no ministério": "Empenha-se no Ministério",
-        "Empenha-se no Ministério ": "Empenha-se no Ministério",
+        "Empanha-se no Ministério": "Empenha-se no Ministério",
     })
 
     # Garantir tipos numéricos
@@ -58,26 +50,20 @@ st.subheader("Definir semanas do mês")
 primeira_semana = st.date_input("Escolhe a primeira semana do mês")
 num_semanas = st.radio("Número de semanas:", [4, 5], index=0)
 
-# Gerar semanas consecutivas (etiquetas curtas)
+# Gerar semanas consecutivas
 semanas = [(primeira_semana + timedelta(weeks=i)).strftime("%d %b") for i in range(num_semanas)]
 
 nomes_df = load_nomes()
 partes_cfg = load_partes()
 
-# Lista de nomes visíveis + entrada vazia para permitir não preencher
 nomes_visiveis = [""] + nomes_df[nomes_df["Visível"].astype(str).str.lower() == "true"]["Nome"].tolist()
-
-# Feedback se não há partes
-if partes_cfg.empty:
-    st.warning("Não há partes configuradas. Verifica o ficheiro partes_reuniao.csv.")
-    st.stop()
 
 dados = []
 
 for idx, semana in enumerate(semanas, start=1):
     st.header(f"📅 Semana {idx} - {semana}")
 
-    # Início da Reunião (sem comentários iniciais)
+    # Início da Reunião
     st.subheader("Início da Reunião")
     presidente = st.selectbox(f"Presidente ({semana})", nomes_visiveis, key=f"presidente_{semana}")
     dados.append({"Semana": semana, "Secção": "Início da Reunião", "Parte": "Presidente", "Responsável": presidente})
@@ -91,67 +77,64 @@ for idx, semana in enumerate(semanas, start=1):
         responsavel = st.selectbox(f"{parte} ({semana})", nomes_visiveis, key=f"{semana}_{parte}")
         dados.append({"Semana": semana, "Secção": "Tesouros da Palavra de Deus", "Parte": parte, "Responsável": responsavel})
 
-    # Empenha-se no Ministério (dinâmico via CSV)
+    # Empenha-se no Ministério (flexível)
     st.subheader("Empenha-se no Ministério")
     ministerio_partes = partes_cfg[partes_cfg["Secção"] == "Empenha-se no Ministério"]
 
-    if ministerio_partes.empty:
-        st.info("Nenhuma parte configurada para 'Empenha-se no Ministério' no CSV.")
-    else:
-        for _, row in ministerio_partes.iterrows():
-            parte_nome = str(row["Parte"])
-            tempo_min = int(row["TempoMin"])
-            tempo_max = int(row["TempoMax"])
-            default = tempo_min if tempo_min <= tempo_max else tempo_max
+    num_ministerio = st.number_input(f"Número de partes ({semana})", min_value=1, max_value=4, value=3, key=f"num_ministerio_{semana}")
+    for i in range(num_ministerio):
+        parte_escolhida = st.selectbox(
+            f"Parte {i+1} ({semana})",
+            ministerio_partes["Parte"].unique(),
+            key=f"{semana}_ministerio_parte_{i}"
+        )
+        row = ministerio_partes[ministerio_partes["Parte"] == parte_escolhida].iloc[0]
+        tempo = st.number_input(
+            f"Tempo para {parte_escolhida} ({semana})",
+            min_value=int(row["TempoMin"]),
+            max_value=int(row["TempoMax"]),
+            value=int(row["TempoMin"]),
+            key=f"{semana}_ministerio_tempo_{i}"
+        )
+        resp1 = st.selectbox(f"{parte_escolhida} - Designado 1 ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_1_{i}")
+        resp2 = st.selectbox(f"{parte_escolhida} - Designado 2 ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_2_{i}")
 
-            tempo = st.number_input(
-                f"{parte_nome} - Tempo ({semana})",
-                min_value=tempo_min,
-                max_value=tempo_max,
-                value=default,
-                key=f"{semana}_{parte_nome}_tempo"
-            )
-            # Duas designações (par) para estas partes
-            resp1 = st.selectbox(f"{parte_nome} - Designado 1 ({semana})", nomes_visiveis, key=f"{semana}_{parte_nome}_1")
-            resp2 = st.selectbox(f"{parte_nome} - Designado 2 ({semana})", nomes_visiveis, key=f"{semana}_{parte_nome}_2")
+        dados.append({
+            "Semana": semana,
+            "Secção": "Empenha-se no Ministério",
+            "Parte": f"{parte_escolhida} ({tempo} min)",
+            "Responsável": f"{resp1} / {resp2}"
+        })
 
-            dados.append({
-                "Semana": semana,
-                "Secção": "Empenha-se no Ministério",
-                "Parte": f"{parte_nome} ({tempo} min)",
-                "Responsável": f"{resp1} / {resp2}"
-            })
-
-    # Viver como Cristãos (dinâmico via CSV)
+    # Viver como Cristãos (flexível)
     st.subheader("Viver como Cristãos")
     viver_partes = partes_cfg[partes_cfg["Secção"] == "Viver como Cristãos"]
 
-    if viver_partes.empty:
-        st.info("Nenhuma parte configurada para 'Viver como Cristãos' no CSV.")
-    else:
-        for _, row in viver_partes.iterrows():
-            parte_nome = str(row["Parte"])
-            tempo_min = int(row["TempoMin"])
-            tempo_max = int(row["TempoMax"])
-            default = tempo_min if tempo_min <= tempo_max else tempo_max
+    num_viver = st.number_input(f"Número de partes ({semana})", min_value=1, max_value=4, value=2, key=f"num_viver_{semana}")
+    for i in range(num_viver):
+        parte_escolhida = st.selectbox(
+            f"Parte {i+1} ({semana})",
+            viver_partes["Parte"].unique(),
+            key=f"{semana}_viver_parte_{i}"
+        )
+        row = viver_partes[viver_partes["Parte"] == parte_escolhida].iloc[0]
+        tempo = st.number_input(
+            f"Tempo para {parte_escolhida} ({semana})",
+            min_value=int(row["TempoMin"]),
+            max_value=int(row["TempoMax"]),
+            value=int(row["TempoMin"]),
+            key=f"{semana}_viver_tempo_{i}"
+        )
+        resp = st.selectbox(f"{parte_escolhida} - Responsável ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_resp_{i}")
 
-            tempo = st.number_input(
-                f"{parte_nome} - Tempo ({semana})",
-                min_value=tempo_min,
-                max_value=tempo_max,
-                value=default,
-                key=f"{semana}_{parte_nome}_tempo"
-            )
-            resp = st.selectbox(f"{parte_nome} ({semana})", nomes_visiveis, key=f"{semana}_{parte_nome}_resp")
+        dados.append({
+            "Semana": semana,
+            "Secção": "Viver como Cristãos",
+            "Parte": f"{parte_escolhida} ({tempo} min)",
+            "Responsável": resp
+        })
 
-            dados.append({
-                "Semana": semana,
-                "Secção": "Viver como Cristãos",
-                "Parte": f"{parte_nome} ({tempo} min)",
-                "Responsável": resp
-            })
-
-    # Final da Reunião (sem comentários finais)
+    # Final da Reunião
     st.subheader("Final da Reunião")
     oracao_final = st.selectbox(f"Oração Final ({semana})", nomes_visiveis, key=f"oracao_final_{semana}")
     dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": "Oração Final", "Responsável": oracao_final})
