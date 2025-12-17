@@ -48,6 +48,7 @@ dados = []
 for idx, semana in enumerate(semanas, start=1):
     st.header(f"📅 Semana {idx} - {semana}")
 
+    # Início da Reunião
     st.subheader("Início da Reunião")
     presidente = st.selectbox(f"Presidente ({semana})", nomes_visiveis, key=f"presidente_{semana}")
     dados.append({"Semana": semana, "Secção": "Início da Reunião", "Parte": "Presidente", "Responsável": presidente})
@@ -55,11 +56,13 @@ for idx, semana in enumerate(semanas, start=1):
     oracao_inicial = st.selectbox(f"Oração Inicial ({semana})", nomes_visiveis, key=f"oracao_inicial_{semana}")
     dados.append({"Semana": semana, "Secção": "Início da Reunião", "Parte": "Oração Inicial", "Responsável": oracao_inicial})
 
+    # Tesouros da Palavra de Deus
     st.subheader("Tesouros da Palavra de Deus")
     for parte in ["Tesouros da Palavra de Deus", "Pérolas Espirituais", "Leitura da Bíblia"]:
         responsavel = st.selectbox(f"{parte} ({semana})", nomes_visiveis, key=f"{semana}_{parte}")
         dados.append({"Semana": semana, "Secção": "Tesouros da Palavra de Deus", "Parte": parte, "Responsável": responsavel})
 
+    # Empenha-se no Ministério
     st.subheader("Empenha-se no Ministério")
     ministerio_partes = partes_cfg[partes_cfg["Secção"] == "Empenha-se no Ministério"]
     num_ministerio = st.number_input(f"Número de partes ({semana})", min_value=1, max_value=4, value=3, key=f"num_ministerio_{semana}")
@@ -96,18 +99,13 @@ for idx, semana in enumerate(semanas, start=1):
                 "Responsável": f"{resp1} / {resp2}"
             })
 
-          st.subheader("Viver como Cristãos")
+    # Viver como Cristãos
+    st.subheader("Viver como Cristãos")
     viver_partes = partes_cfg[partes_cfg["Secção"] == "Viver como Cristãos"]
-
     opcoes_variaveis = ["Nenhuma", "Necessidades Locais", "Realizações da Organização", "Atualização Corpo Governante"]
 
     for i in range(2):
-        parte_escolhida = st.selectbox(
-            f"Parte variável {i+1} ({semana})",
-            opcoes_variaveis,
-            key=f"{semana}_viver_parte_{i}"
-        )
-
+        parte_escolhida = st.selectbox(f"Parte variável {i+1} ({semana})", opcoes_variaveis, key=f"{semana}_viver_parte_{i}")
         if parte_escolhida != "Nenhuma":
             row = viver_partes[viver_partes["Parte"] == parte_escolhida].iloc[0]
             tempo = st.number_input(
@@ -117,11 +115,7 @@ for idx, semana in enumerate(semanas, start=1):
                 value=int(row["TempoMin"]),
                 key=f"{semana}_viver_tempo_{i}"
             )
-            resp = st.selectbox(
-                f"{parte_escolhida} - Responsável ({semana})",
-                nomes_visiveis,
-                key=f"{semana}_{parte_escolhida}_resp_{i}"
-            )
+            resp = st.selectbox(f"{parte_escolhida} - Responsável ({semana})", nomes_visiveis, key=f"{semana}_{parte_escolhida}_resp_{i}")
             dados.append({
                 "Semana": semana,
                 "Secção": "Viver como Cristãos",
@@ -130,11 +124,7 @@ for idx, semana in enumerate(semanas, start=1):
                 "Responsável": resp
             })
 
-    resp_estudo = st.selectbox(
-        f"Estudo Bíblico de Congregação ({semana})",
-        nomes_visiveis,
-        key=f"{semana}_estudo_biblico"
-    )
+    resp_estudo = st.selectbox(f"Estudo Bíblico de Congregação ({semana})", nomes_visiveis, key=f"{semana}_estudo_biblico")
     dados.append({
         "Semana": semana,
         "Secção": "Viver como Cristãos",
@@ -143,38 +133,15 @@ for idx, semana in enumerate(semanas, start=1):
         "Responsável": resp_estudo
     })
 
-    resp_leitor = st.selectbox(
-        f"Leitor do Estudo Bíblico ({semana})",
-        nomes_visiveis,
-        key=f"{semana}_leitor_estudo"
-    )
+    resp_leitor = st.selectbox(f"Leitor do Estudo Bíblico ({semana})", nomes_visiveis, key=f"{semana}_leitor_estudo")
     dados.append({
         "Semana": semana,
         "Secção": "Viver como Cristãos",
         "Ordem": "Parte fixa 2",
-        "Parte": "Leitor do Estudo Bíblico (0 min)",
+        "Parte": "Leitor do Estudo Bíblico",
         "Responsável": resp_leitor
     })
 
-
-
-
+    # Final da Reunião
     st.subheader("Final da Reunião")
-    oracao_final = st.selectbox(f"Oração Final ({semana})", nomes_visiveis, key=f"oracao_final_{semana}")
-    dados.append({"Semana": semana, "Secção": "Final da Reunião", "Parte": "Oração Final", "Responsável": oracao_final})
-
-partes_df_final = pd.DataFrame(dados)
-
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("💾 Guardar designações em CSV"):
-        partes_df_final.to_csv("partes.csv", index=False)
-        st.success("Designações guardadas em partes.csv")
-
-with col2:
-    st.download_button(
-        "📥 Exportar CSV",
-        data=partes_df_final.to_csv(index=False),
-        file_name="partes.csv",
-        mime="text/csv",
-    )
+    oracao_final = st.selectbox(f"Oração Final ({semana})", nomes_visiveis, key=f"oracao_final_{
