@@ -4,20 +4,9 @@ import os
 from datetime import datetime
 from fpdf import FPDF
 import io
-import unicodedata
 
 EXPORT_DIR = "pages/exportacoes"
 os.makedirs(EXPORT_DIR, exist_ok=True)
-
-# -------------------------
-# Função para limpar texto
-# -------------------------
-def limpar_texto(texto):
-    if pd.isna(texto):
-        return ""
-    texto = str(texto)
-    texto = unicodedata.normalize("NFKD", texto).encode("latin-1", "ignore").decode("latin-1")
-    return texto
 
 # -------------------------
 # Funções de exportação
@@ -25,7 +14,11 @@ def limpar_texto(texto):
 def gerar_pdf(df):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", size=12)
+
+    # Fonte Unicode
+    pdf.add_font("DejaVu", "", "fonts/DejaVuSans.ttf", uni=True)
+    pdf.set_font("DejaVu", size=12)
+
     pdf.cell(200, 10, "Designações da Reunião", ln=True, align="C")
     pdf.ln(5)
 
@@ -37,30 +30,36 @@ def gerar_pdf(df):
     pdf.ln()
 
     for _, row in df.iterrows():
-        pdf.cell(col_widths[0], 8, limpar_texto(row["Semana"]), border=1)
-        pdf.cell(col_widths[1], 8, limpar_texto(row["Secção"]), border=1)
-        pdf.cell(col_widths[2], 8, limpar_texto(row["Ordem"]), border=1)
-        pdf.cell(col_widths[3], 8, limpar_texto(row["Parte"])[:65], border=1)
-        pdf.cell(col_widths[4], 8, limpar_texto(row["Responsável"]), border=1)
+        pdf.cell(col_widths[0], 8, str(row["Semana"]), border=1)
+        pdf.cell(col_widths[1], 8, str(row["Secção"]), border=1)
+        pdf.cell(col_widths[2], 8, str(row["Ordem"]), border=1)
+        pdf.cell(col_widths[3], 8, str(row["Parte"])[:65], border=1)
+        pdf.cell(col_widths[4], 8, str(row["Responsável"]), border=1)
         pdf.ln()
 
     buffer = io.BytesIO()
     pdf.output(buffer)
     return buffer.getvalue()
 
+
 def gerar_pdf_limpo(df):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", size=12)
+
+    # Fonte Unicode
+    pdf.add_font("DejaVu", "", "fonts/DejaVuSans.ttf", uni=True)
+    pdf.set_font("DejaVu", size=12)
+
     pdf.cell(200, 10, "Designações — Versão para Impressão", ln=True, align="C")
     pdf.ln(10)
 
     for _, row in df.iterrows():
-        pdf.set_font("Arial", "B", 11)
-        pdf.cell(0, 8, limpar_texto(f"{row['Semana']} — {row['Secção']}"), ln=True)
-        pdf.set_font("Arial", size=11)
-        pdf.multi_cell(0, 6, limpar_texto(f"{row['Ordem']}: {row['Parte']}"))
-        pdf.cell(0, 6, limpar_texto(f"Responsável: {row['Responsável']}"), ln=True)
+        pdf.set_font("DejaVu", "B", 11)
+        pdf.cell(0, 8, f"{row['Semana']} — {row['Secção']}", ln=True)
+
+        pdf.set_font("DejaVu", size=11)
+        pdf.multi_cell(0, 6, f"{row['Ordem']}: {row['Parte']}")
+        pdf.cell(0, 6, f"Responsável: {row['Responsável']}", ln=True)
         pdf.ln(3)
 
     buffer = io.BytesIO()
