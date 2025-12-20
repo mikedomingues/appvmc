@@ -13,6 +13,8 @@ os.makedirs(EXPORT_DIR, exist_ok=True)
 # -------------------------
 def gerar_pdf(df):
     pdf = FPDF()
+    pdf.add_font("Arial", style="", fname="Arial.ttf", uni=True)
+pdf.set_font("Arial", size=12)
     pdf.add_page()
     pdf.set_font("Arial", size=12)
     pdf.cell(200, 10, "Designações da Reunião", ln=True, align="C")
