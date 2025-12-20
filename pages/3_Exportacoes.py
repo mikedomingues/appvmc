@@ -33,7 +33,8 @@ def gerar_pdf(df):
         pdf.cell(col_widths[4], 8, str(row["Responsável"]), border=1)
         pdf.ln()
 
-    return pdf.output(dest="S").encode("latin-1")
+    return pdf.output(dest="S").encode("utf-8", errors="replace")
+
 
 def gerar_pdf_limpo(df):
     pdf = FPDF()
