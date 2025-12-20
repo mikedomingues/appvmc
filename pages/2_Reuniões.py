@@ -150,65 +150,88 @@ for idx, semana in enumerate(semanas, start=1):
                 "Responsável": f"{resp1} / {resp2}"
             })
 
-    # Viver como Cristãos (sem especiais; 1 ou 2 partes variáveis, tempo 5–15)
-    st.subheader("Viver como Cristãos")
-    viver_cfg = partes_cfg[partes_cfg["Secção"] == "Viver como Cristãos"].copy()
+    # -------------------------
+# Viver como Cristãos
+# -------------------------
+st.subheader("Viver como Cristãos")
 
-    opcoes_variaveis = ["Nenhuma"] + sorted([
-        p for p in viver_cfg["Parte"].unique().tolist()
-        if p != "Estudo Bíblico de Congregação"
-    ])
+viver_cfg = partes_cfg[partes_cfg["Secção"] == "Viver como Cristãos"].copy()
 
-    for i in range(2):
-        parte_var = st.selectbox(f"Parte variável {i+1} ({semana})", opcoes_variaveis, key=f"{semana}_viver_parte_{i}")
-        if parte_var != "Nenhuma":
-            rows_v = viver_cfg[viver_cfg["Parte"] == parte_var]
-            if rows_v.empty:
-                st.warning(f"A parte '{parte_var}' não está configurada no CSV em 'Viver como Cristãos'.")
-                continue
-            row_v = rows_v.iloc[0]
-            tempo = st.number_input(
-                f"Tempo para {parte_var} ({semana})",
-                min_value=5,
-                max_value=15,
-                value=max(5, int(row_v["TempoMin"])),
-                key=f"{semana}_viver_tempo_{i}"
-            )
-            resp = st.selectbox(f"{parte_var} - Responsável ({semana})", nomes_visiveis, key=f"{semana}_viver_resp_{i}")
-            dados.append({
-                "Semana": semana,
-                "Secção": "Viver como Cristãos",
-                "Ordem": f"Parte variável {i+1}",
-                "Parte": f"{parte_var} ({tempo} min)",
-                "Responsável": resp
-            })
+# Lista de partes variáveis (exclui Estudo Bíblico fixo)
+opcoes_variaveis = sorted([
+    p for p in viver_cfg["Parte"].unique().tolist()
+    if p != "Estudo Bíblico de Congregação"
+])
 
-    # Fixas no fim
-    resp_estudo = st.selectbox(
-        f"Estudo Bíblico de Congregação ({semana})",
-        nomes_visiveis,
-        key=f"{semana}_estudo_biblico"
+# Quantas partes variáveis o utilizador quer?
+num_partes_vc = st.number_input(
+    f"Número de partes variáveis ({semana})",
+    min_value=1,
+    max_value=3,
+    value=1,
+    step=1,
+    key=f"{semana}_num_vc"
+)
+
+# Criar as partes variáveis dinamicamente
+for i in range(num_partes_vc):
+    parte_var = st.selectbox(
+        f"Parte variável {i+1} ({semana})",
+        ["Nenhuma"] + opcoes_variaveis,
+        key=f"{semana}_viver_parte_{i}"
     )
-    dados.append({
-        "Semana": semana,
-        "Secção": "Viver como Cristãos",
-        "Ordem": "Parte fixa 1",
-        "Parte": "Estudo Bíblico de Congregação (30 min)",
-        "Responsável": resp_estudo
-    })
 
-    resp_leitor = st.selectbox(
-        f"Leitor do Estudo Bíblico ({semana})",
-        nomes_visiveis,
-        key=f"{semana}_leitor_estudo"
-    )
-    dados.append({
-        "Semana": semana,
-        "Secção": "Viver como Cristãos",
-        "Ordem": "Parte fixa 2",
-        "Parte": "Leitor do Estudo Bíblico",
-        "Responsável": resp_leitor
-    })
+    if parte_var != "Nenhuma":
+        tempo = st.number_input(
+            f"Tempo para {parte_var} ({semana})",
+            min_value=5,
+            max_value=15,
+            value=5,
+            key=f"{semana}_viver_tempo_{i}"
+        )
+
+        # DESIGNADO VEM DO nomes.csv
+        resp = st.selectbox(
+            f"{parte_var} - Designado ({semana})",
+            nomes_visiveis,
+            key=f"{semana}_viver_resp_{i}"
+        )
+
+        dados.append({
+            "Semana": semana,
+            "Secção": "Viver como Cristãos",
+            "Ordem": f"Parte variável {i+1}",
+            "Parte": f"{parte_var} ({tempo} min)",
+            "Responsável": resp
+        })
+
+# Parte fixa 1 — Estudo Bíblico
+resp_estudo = st.selectbox(
+    f"Estudo Bíblico de Congregação ({semana})",
+    nomes_visiveis,
+    key=f"{semana}_estudo_biblico"
+)
+dados.append({
+    "Semana": semana,
+    "Secção": "Viver como Cristãos",
+    "Ordem": "Parte fixa 1",
+    "Parte": "Estudo Bíblico de Congregação (30 min)",
+    "Responsável": resp_estudo
+})
+
+# Parte fixa 2 — Leitor
+resp_leitor = st.selectbox(
+    f"Leitor do Estudo Bíblico ({semana})",
+    nomes_visiveis,
+    key=f"{semana}_leitor_estudo"
+)
+dados.append({
+    "Semana": semana,
+    "Secção": "Viver como Cristãos",
+    "Ordem": "Parte fixa 2",
+    "Parte": "Leitor do Estudo Bíblico",
+    "Responsável": resp_leitor
+})
 
     # Final da Reunião
     st.subheader("Final da Reunião")
