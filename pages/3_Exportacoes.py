@@ -44,7 +44,9 @@ def gerar_pdf(df):
         pdf.cell(col_widths[4], 8, limpar_texto(row["Responsável"]), border=1)
         pdf.ln()
 
-    return pdf.output(dest="S").encode("latin-1")
+    buffer = io.BytesIO()
+    pdf.output(buffer)
+    return buffer.getvalue()
 
 def gerar_pdf_limpo(df):
     pdf = FPDF()
@@ -61,7 +63,9 @@ def gerar_pdf_limpo(df):
         pdf.cell(0, 6, limpar_texto(f"Responsável: {row['Responsável']}"), ln=True)
         pdf.ln(3)
 
-    return pdf.output(dest="S").encode("latin-1")
+    buffer = io.BytesIO()
+    pdf.output(buffer)
+    return buffer.getvalue()
 
 # -------------------------
 # Página principal
