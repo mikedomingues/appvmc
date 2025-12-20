@@ -93,7 +93,11 @@ with col2:
     filtro_secao = st.selectbox("Secção:", secoes)
 
 with col3:
-    responsaveis = ["Todos"] + sorted(df["Responsável"].unique().tolist())
+    if "Responsável" in df.columns:
+    responsaveis = ["Todos"] + sorted(df["Responsável"].dropna().unique().tolist())
+else:
+    responsaveis = ["Todos"]
+
     filtro_resp = st.selectbox("Responsável:", responsaveis)
 
 df_filtrado = df.copy()
