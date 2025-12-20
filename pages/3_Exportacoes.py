@@ -51,7 +51,8 @@ def gerar_pdf_limpo(df):
         pdf.cell(0, 6, f"Responsável: {row['Responsável']}", ln=True)
         pdf.ln(3)
 
-    return pdf.output(dest="S").encode("latin-1")
+    return pdf.output(dest="S").encode("utf-8", errors="replace")
+
 
 # -------------------------
 # Página principal
