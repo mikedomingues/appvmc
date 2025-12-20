@@ -148,49 +148,99 @@ for idx, semana in enumerate(semanas, start=1):
                 "Responsável": f"{resp1} / {resp2}"
             })
 
-    # -------------------------
-    # Viver como Cristãos (REFEITO)
-    # -------------------------
-    st.subheader("Viver como Cristãos")
+# -------------------------
+# Viver como Cristãos
+# -------------------------
+st.subheader("Viver como Cristãos")
 
-    num_partes_vc = st.number_input(
-        f"Número de partes variáveis ({semana})",
-        min_value=1,
-        max_value=3,
-        value=1,
-        step=1,
-        key=f"{semana}_num_vc"
+# Checkbox para Semana Especial
+semana_especial = st.checkbox(
+    f"Semana Especial ({semana})",
+    key=f"{semana}_especial"
+)
+
+# Número de partes variáveis
+num_partes_vc = st.number_input(
+    f"Número de partes variáveis ({semana})",
+    min_value=1,
+    max_value=3,
+    value=1,
+    step=1,
+    key=f"{semana}_num_vc"
+)
+
+# Partes variáveis (tempo + designado)
+for i in range(num_partes_vc):
+    tempo = st.number_input(
+        f"Tempo da Parte variável {i+1} ({semana})",
+        min_value=5,
+        max_value=15,
+        value=5,
+        key=f"{semana}_viver_tempo_{i}"
     )
 
-    for i in range(num_partes_vc):
-        tempo = st.number_input(
-            f"Tempo da Parte variável {i+1} ({semana})",
-            min_value=5,
-            max_value=15,
-            value=5,
-            key=f"{semana}_viver_tempo_{i}"
-        )
+    resp = st.selectbox(
+        f"Parte variável {i+1} - Designado ({semana})",
+        nomes_visiveis,
+        key=f"{semana}_viver_resp_{i}"
+    )
 
-        resp = st.selectbox(
-            f"Parte variável {i+1} - Designado ({semana})",
-            nomes_visiveis,
-            key=f"{semana}_viver_resp_{i}"
-        )
+    dados.append({
+        "Semana": semana,
+        "Secção": "Viver como Cristãos",
+        "Ordem": f"Parte variável {i+1}",
+        "Parte": f"Parte variável {i+1} ({tempo} min)",
+        "Responsável": resp
+    })
 
-        dados.append({
-            "Semana": semana,
-            "Secção": "Viver como Cristãos",
-            "Ordem": f"Parte variável {i+1}",
-            "Parte": f"Parte variável {i+1} ({tempo} min)",
-            "Responsável": resp
-        })
+# -------------------------
+# Partes fixas OU Semana Especial
+# -------------------------
+if semana_especial:
+    # Substitui Estudo Bíblico + Leitor por Discurso de Serviço
+    resp_ds = st.selectbox(
+        f"Discurso de Serviço ({semana})",
+        nomes_visiveis,
+        key=f"{semana}_discurso_servico"
+    )
 
-    # Partes fixas
-    resp_estudo = st.selectbox(f"Estudo Bíblico de Congregação ({semana})", nomes_visiveis, key=f"{semana}_estudo")
-    dados.append({"Semana": semana, "Secção": "Viver como Cristãos", "Ordem": "Parte fixa 1", "Parte": "Estudo Bíblico de Congregação (30 min)", "Responsável": resp_estudo})
+    dados.append({
+        "Semana": semana,
+        "Secção": "Viver como Cristãos",
+        "Ordem": "Parte Especial",
+        "Parte": "Discurso de Serviço (30 min)",
+        "Responsável": resp_ds
+    })
 
-    resp_leitor = st.selectbox(f"Leitor do Estudo Bíblico ({semana})", nomes_visiveis, key=f"{semana}_leitor")
-    dados.append({"Semana": semana, "Secção": "Viver como Cristãos", "Ordem": "Parte fixa 2", "Parte": "Leitor do Estudo Bíblico", "Responsável": resp_leitor})
+else:
+    # Parte fixa 1 — Estudo Bíblico
+    resp_estudo = st.selectbox(
+        f"Estudo Bíblico de Congregação ({semana})",
+        nomes_visiveis,
+        key=f"{semana}_estudo_biblico"
+    )
+    dados.append({
+        "Semana": semana,
+        "Secção": "Viver como Cristãos",
+        "Ordem": "Parte fixa 1",
+        "Parte": "Estudo Bíblico de Congregação (30 min)",
+        "Responsável": resp_estudo
+    })
+
+    # Parte fixa 2 — Leitor
+    resp_leitor = st.selectbox(
+        f"Leitor do Estudo Bíblico ({semana})",
+        nomes_visiveis,
+        key=f"{semana}_leitor_estudo"
+    )
+    dados.append({
+        "Semana": semana,
+        "Secção": "Viver como Cristãos",
+        "Ordem": "Parte fixa 2",
+        "Parte": "Leitor do Estudo Bíblico",
+        "Responsável": resp_leitor
+    })
+
 
     # -------------------------
     # Final da Reunião
