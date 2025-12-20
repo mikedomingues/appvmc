@@ -169,7 +169,7 @@ num_partes_vc = st.number_input(
     key=f"{semana}_num_vc"
 )
 
-# Partes variáveis (tempo + designado)
+# Partes variáveis
 for i in range(num_partes_vc):
     tempo = st.number_input(
         f"Tempo da Parte variável {i+1} ({semana})",
@@ -197,6 +197,7 @@ for i in range(num_partes_vc):
 # Partes fixas OU Semana Especial
 # -------------------------
 if semana_especial:
+
     # Substitui Estudo Bíblico + Leitor por Discurso de Serviço
     resp_ds = st.selectbox(
         f"Discurso de Serviço ({semana})",
@@ -213,12 +214,14 @@ if semana_especial:
     })
 
 else:
+
     # Parte fixa 1 — Estudo Bíblico
     resp_estudo = st.selectbox(
         f"Estudo Bíblico de Congregação ({semana})",
         nomes_visiveis,
         key=f"{semana}_estudo_biblico"
     )
+
     dados.append({
         "Semana": semana,
         "Secção": "Viver como Cristãos",
@@ -233,6 +236,7 @@ else:
         nomes_visiveis,
         key=f"{semana}_leitor_estudo"
     )
+
     dados.append({
         "Semana": semana,
         "Secção": "Viver como Cristãos",
@@ -240,6 +244,7 @@ else:
         "Parte": "Leitor do Estudo Bíblico",
         "Responsável": resp_leitor
     })
+
 
 
     # -------------------------
