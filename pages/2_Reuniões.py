@@ -1,276 +1,349 @@
 import streamlit as st
 import pandas as pd
 import os
-from datetime import timedelta
+from datetime import datetime
 from fpdf import FPDF
+import io
 
-DB_FILE = "nomes.csv"
-PARTES_FILE = "partes_reuniao.csv"
-
-# -------------------------
-# Carregar nomes
-# -------------------------
-def load_nomes():
-    if os.path.exists(DB_FILE):
-        df = pd.read_csv(DB_FILE)
-        if "Nome" not in df.columns:
-            df["Nome"] = ""
-        if "Visível" not in df.columns:
-            df["Visível"] = True
-        df["Visível"] = df["Visível"].astype(str).str.lower().isin(["true", "1", "sim", "yes"])
-        return df
-    return pd.DataFrame(columns=["Nome", "Visível"])
+# Diretórios
+EXPORT_DIR = "pages/exportacoes"
+os.makedirs(EXPORT_DIR, exist_ok=True)
 
 # -------------------------
-# Carregar partes
+# Classe PDF para lista simples
 # -------------------------
-def load_partes():
-    if not os.path.exists(PARTES_FILE):
-        st.warning("Faltou o ficheiro partes_reuniao.csv.")
-        return pd.DataFrame(columns=["Secção", "Parte", "TempoMin", "TempoMax"])
+class PDFLista(FPDF):
+    def __init__(self):
+        super().__init__()
+        self.add_font("DejaVu", "", "fonts/DejaVuSans.ttf", uni=True)
+        self.add_font("DejaVu", "B", "fonts/DejaVuSans.ttf", uni=True)
 
-    df = pd.read_csv(PARTES_FILE)
-    df["Secção"] = df["Secção"].astype(str).str.strip()
-    df["TempoMin"] = pd.to_numeric(df["TempoMin"], errors="coerce").fillna(0).astype(int)
-    df["TempoMax"] = pd.to_numeric(df["TempoMax"], errors="coerce").fillna(0).astype(int)
-    return df
+    def footer(self):
+        self.set_y(-15)
+        self.set_font("DejaVu", size=9)
+        self.cell(0, 10, f"Página {self.page_no()}", align="C")
+
 
 # -------------------------
-# Exportar PDF
+# Classe PDF para Modelo A (mensal)
 # -------------------------
-def export_pdf(df):
-    pdf = FPDF()
+class PDFModeloMensal(FPDF):
+    def __init__(self, titulo="Reunião Vida e Ministério Cristãos"):
+        super().__init__(orientation="P", unit="mm", format="A4")
+        self.titulo = titulo
+        self.set_auto_page_break(auto=True, margin=15)
+        self.add_font("DejaVu", "", "fonts/DejaVuSans.ttf", uni=True)
+        self.add_font("DejaVu", "B", "fonts/DejaVuSans.ttf", uni=True)
+
+    def header(self):
+        # Título no topo
+        self.set_font("DejaVu", "B", 14)
+        self.cell(0, 8, self.titulo, ln=True, align="C")
+        self.ln(4)
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font("DejaVu", size=9)
+        self.cell(0, 10, f"Página {self.page_no()}", align="C")
+
+    def secao_imagem(self, imagem_path):
+        # Insere imagem de secção se existir
+        if os.path.exists(imagem_path):
+            # largura quase total, centrada
+            x = 10
+            w = 190
+            y = self.get_y()
+            self.image(imagem_path, x=x, y=y, w=w)
+            self.ln(15)
+        else:
+            self.ln(5)
+
+    def desenhar_tabela_mensal(self, semanas):
+        """
+        Cria a estrutura da tabela mensal com base nas semanas.
+        'semanas' é uma lista de strings (ex: ['01 set', '08 set', ...])
+        """
+        self.set_font("DejaVu", "B", 10)
+
+        # Larguras das colunas: 1ª coluna (descrição) + colunas das semanas
+        col_desc_w = 60
+        col_sem_w = (190 - col_desc_w) / max(len(semanas), 1)
+
+        # Cabeçalho da tabela
+        self.cell(col_desc_w, 8, "Semana", border=1, align="L")
+        for sem in semanas:
+            self.cell(col_sem_w, 8, sem, border=1, align="C")
+        self.ln()
+
+        self.set_font("DejaVu", "", 9)
+
+        def linha(texto_desc, valores=None, bold=False, colspan_desc=1, is_header=False):
+            """
+            Desenha uma linha da tabela.
+            - texto_desc: texto da primeira coluna
+            - valores: lista de strings para as colunas das semanas
+            - bold: se True, usa negrito na descrição
+            - colspan_desc: se 5, por ex., faz uma linha que ocupa a tabela toda
+            - is_header: se True, trata como linha de secção (sem valores)
+            """
+            if bold:
+                self.set_font("DejaVu", "B", 9)
+            else:
+                self.set_font("DejaVu", "", 9)
+
+            if colspan_desc > 1:
+                # Linha que ocupa toda a largura da tabela
+                total_w = col_desc_w + col_sem_w * len(semanas)
+                self.cell(total_w, 7, texto_desc, border=1, ln=True, align="L")
+                return
+
+            # Linha normal
+            self.cell(col_desc_w, 7, texto_desc, border=1, align="L")
+
+            if valores is None:
+                valores = [""] * len(semanas)
+
+            for v in valores:
+                self.cell(col_sem_w, 7, v, border=1, align="C")
+
+            self.ln()
+
+        # -------------------------
+        # Estrutura fixa do modelo
+        # -------------------------
+
+        # Presidente
+        linha("Presidente")
+
+        # Oração Inicial
+        linha("Oração Inicial")
+
+        # Comentários introdutórios 1 min
+        linha("Comentários introdutórios 1 min")
+
+        # Tesouros da Palavra de Deus (secção)
+        linha("Tesouros da Palavra de Deus", colspan_desc=2 + len(semanas))
+
+        # Tesouros da Palavra de Deus 8 min
+        linha("Tesouros da Palavra de Deus 8 min")
+
+        # Pérolas Espirituais 8 min
+        linha("Pérolas Espirituais 8 min")
+
+        # Leitura da Bíblia 4 min
+        linha("Leitura da Bíblia 4 min")
+
+        # Empenha-se no Ministério (secção)
+        linha("Empenha-se no Ministério", colspan_desc=2 + len(semanas))
+
+        # Designações de Estudante (cabeçalho especial)
+        # 1ª linha: cabeçalho "Designações de Estudante" + "Iniciar conversas (3 min)" em cada semana
+        self.set_font("DejaVu", "B", 9)
+        self.cell(col_desc_w, 7, "Designações de Estudante", border=1, align="C")
+        for _ in semanas:
+            self.cell(col_sem_w, 7, "Iniciar conversas (3 min)", border=1, align="C")
+        self.ln()
+
+        # 2ª linha: Cultivar/Fazer discípulos
+        self.set_font("DejaVu", "B", 9)
+        self.cell(col_desc_w, 7, "Cultivar/Fazer discípulos", border=1, align="C")
+        for _ in semanas:
+            self.cell(col_sem_w, 7, "Cultivar o interesse (3 min)", border=1, align="C")
+        self.ln()
+
+        self.cell(col_desc_w, 7, "", border=1, align="C")
+        for _ in semanas:
+            self.cell(col_sem_w, 7, "Fazer discípulos (5 min)", border=1, align="C")
+        self.ln()
+
+        # 3ª linha: Discurso (5 min)
+        self.cell(col_desc_w, 7, "Discurso (5 min)", border=1, align="C")
+        for _ in semanas:
+            self.cell(col_sem_w, 7, "Discurso (5 min)", border=1, align="C")
+        self.ln()
+
+        # Viver como Cristãos (secção)
+        linha("Viver como Cristãos", colspan_desc=2 + len(semanas))
+
+        # Parte n.º 1
+        # No modelo original, os tempos variam por semana, mas aqui deixamos genérico
+        linha("Parte n.º 1")
+
+        # Parte n.º 2 / Estudo Bíblico de Congregação 30 min
+        linha("Parte n.º 2 / Estudo Bíblico de Congregação 30 min")
+
+        # Leitor
+        linha("Leitor")
+
+        # Comentários finais 3 min
+        linha("Comentários finais 3 min")
+
+        # Oração Final
+        linha("Oração Final")
+
+
+# -------------------------
+# Funções de exportação
+# -------------------------
+def gerar_pdf_lista(df):
+    pdf = PDFLista()
     pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt="Designações da Reunião", ln=True, align="C")
-    pdf.ln(5)
+
+    pdf.set_font("DejaVu", "B", 12)
+    pdf.cell(0, 8, "Designações da Reunião", ln=True, align="C")
+    pdf.ln(4)
 
     col_widths = [30, 45, 35, 70, 30]
     headers = ["Semana", "Secção", "Ordem", "Parte", "Responsável"]
 
+    pdf.set_font("DejaVu", "B", 10)
     for i, header in enumerate(headers):
         pdf.cell(col_widths[i], 8, header, border=1)
     pdf.ln()
 
+    pdf.set_font("DejaVu", "", 9)
     for _, row in df.iterrows():
-        pdf.cell(col_widths[0], 8, str(row["Semana"]), border=1)
-        pdf.cell(col_widths[1], 8, str(row["Secção"]), border=1)
+        pdf.cell(col_widths[0], 8, str(row.get("Semana", "")), border=1)
+        pdf.cell(col_widths[1], 8, str(row.get("Secção", "")), border=1)
         pdf.cell(col_widths[2], 8, str(row.get("Ordem", "")), border=1)
-        pdf.cell(col_widths[3], 8, str(row["Parte"])[:65], border=1)
-        pdf.cell(col_widths[4], 8, str(row["Responsável"]), border=1)
+        pdf.cell(col_widths[3], 8, str(row.get("Parte", ""))[:65], border=1)
+        pdf.cell(col_widths[4], 8, str(row.get("Responsável", "")), border=1)
         pdf.ln()
 
-    return pdf.output(dest="S").encode("latin-1")
+    buffer = io.BytesIO()
+    pdf.output(buffer)
+    return buffer.getvalue()
 
-# -------------------------
-# APP
-# -------------------------
-st.title("📅 Gestão de Reuniões")
 
-st.subheader("Definir semanas do mês")
-primeira_semana = st.date_input("Escolhe a primeira semana do mês")
-num_semanas = st.radio("Número de semanas:", [4, 5], index=0)
+def gerar_pdf_mensal(df, titulo="Reunião Vida e Ministério Cristãos"):
+    pdf = PDFModeloMensal(titulo=titulo)
+    pdf.add_page()
 
-semanas = [(primeira_semana + timedelta(weeks=i)).strftime("%d %b") for i in range(num_semanas)]
-
-nomes_df = load_nomes()
-partes_cfg = load_partes()
-nomes_visiveis = [""] + nomes_df[nomes_df["Visível"]]["Nome"].tolist()
-
-dados = []
-
-# -------------------------
-# LOOP DAS SEMANAS
-# -------------------------
-for idx, semana in enumerate(semanas, start=1):
-
-    st.header(f"📅 Semana {idx} - {semana}")
-
-    # -------------------------
-    # Início da Reunião
-    # -------------------------
-    st.subheader("Início da Reunião")
-
-    presidente = st.selectbox(f"Presidente ({semana})", nomes_visiveis, key=f"presidente_{semana}")
-    dados.append({"Semana": semana, "Secção": "Início da Reunião", "Ordem": "Abertura", "Parte": "Presidente", "Responsável": presidente})
-
-    oracao_inicial = st.selectbox(f"Oração Inicial ({semana})", nomes_visiveis, key=f"oracao_inicial_{semana}")
-    dados.append({"Semana": semana, "Secção": "Início da Reunião", "Ordem": "Abertura", "Parte": "Oração Inicial", "Responsável": oracao_inicial})
-
-    # -------------------------
-    # Tesouros da Palavra de Deus
-    # -------------------------
-    st.subheader("Tesouros da Palavra de Deus")
-
-    for parte in ["Tesouros da Palavra de Deus", "Pérolas Espirituais", "Leitura da Bíblia"]:
-        resp = st.selectbox(f"{parte} ({semana})", nomes_visiveis, key=f"{semana}_{parte}")
-        dados.append({"Semana": semana, "Secção": "Tesouros da Palavra de Deus", "Ordem": parte, "Parte": parte, "Responsável": resp})
-
-    # -------------------------
-    # Empenha-se no Ministério
-    # -------------------------
-    st.subheader("Empenha-se no Ministério")
-
-    ministerio_cfg = partes_cfg[partes_cfg["Secção"] == "Empenha-se no Ministério"]
-
-    num_ministerio = st.number_input(f"Número de partes ({semana})", min_value=1, max_value=4, value=3, key=f"num_ministerio_{semana}")
-
-    for i in range(num_ministerio):
-        parte_escolhida = st.selectbox(
-            f"Parte {i+1} ({semana})",
-            ministerio_cfg["Parte"].unique(),
-            key=f"{semana}_ministerio_parte_{i}"
-        )
-
-        row = ministerio_cfg[ministerio_cfg["Parte"] == parte_escolhida].iloc[0]
-
-        if parte_escolhida == "Discurso":
-            resp = st.selectbox(f"Discurso - Responsável ({semana})", nomes_visiveis, key=f"{semana}_discurso_resp_{i}")
-            dados.append({"Semana": semana, "Secção": "Empenha-se no Ministério", "Ordem": f"Parte {i+1}", "Parte": "Discurso (5 min)", "Responsável": resp})
-
-        else:
-            tempo = st.number_input(
-                f"Tempo para {parte_escolhida} ({semana})",
-                min_value=row["TempoMin"],
-                max_value=row["TempoMax"],
-                value=row["TempoMin"],
-                key=f"{semana}_ministerio_tempo_{i}"
-            )
-
-            resp1 = st.selectbox(f"{parte_escolhida} - Designado 1 ({semana})", nomes_visiveis, key=f"{semana}_ministerio_resp1_{i}")
-            resp2 = st.selectbox(f"{parte_escolhida} - Designado 2 ({semana})", nomes_visiveis, key=f"{semana}_ministerio_resp2_{i}")
-
-            dados.append({
-                "Semana": semana,
-                "Secção": "Empenha-se no Ministério",
-                "Ordem": f"Parte {i+1}",
-                "Parte": f"{parte_escolhida} ({tempo} min)",
-                "Responsável": f"{resp1} / {resp2}"
-            })
-
-    # -------------------------
-    # Viver como Cristãos (COM SEMANA ESPECIAL)
-    # -------------------------
-    st.subheader("Viver como Cristãos")
-
-    semana_especial = st.checkbox(
-        f"Semana Especial ({semana})",
-        key=f"{semana}_especial"
-    )
-
-    num_partes_vc = st.number_input(
-        f"Número de partes variáveis ({semana})",
-        min_value=1,
-        max_value=3,
-        value=1,
-        step=1,
-        key=f"{semana}_num_vc"
-    )
-
-    for i in range(num_partes_vc):
-        tempo = st.number_input(
-            f"Tempo da Parte variável {i+1} ({semana})",
-            min_value=5,
-            max_value=15,
-            value=5,
-            key=f"{semana}_viver_tempo_{i}"
-        )
-
-        resp = st.selectbox(
-            f"Parte variável {i+1} - Designado ({semana})",
-            nomes_visiveis,
-            key=f"{semana}_viver_resp_{i}"
-        )
-
-        dados.append({
-            "Semana": semana,
-            "Secção": "Viver como Cristãos",
-            "Ordem": f"Parte variável {i+1}",
-            "Parte": f"Parte variável {i+1} ({tempo} min)",
-            "Responsável": resp
-        })
-
-    if semana_especial:
-
-        resp_ds = st.selectbox(
-            f"Discurso de Serviço ({semana})",
-            nomes_visiveis,
-            key=f"{semana}_discurso_servico"
-        )
-
-        dados.append({
-            "Semana": semana,
-            "Secção": "Viver como Cristãos",
-            "Ordem": "Parte Especial",
-            "Parte": "Discurso de Serviço (30 min)",
-            "Responsável": resp_ds
-        })
-
+    # 1) Determinar semanas únicas a partir do DF
+    if "Semana" not in df.columns:
+        semanas = []
     else:
+        semanas = sorted(df["Semana"].dropna().unique().tolist())
 
-        resp_estudo = st.selectbox(
-            f"Estudo Bíblico de Congregação ({semana})",
-            nomes_visiveis,
-            key=f"{semana}_estudo_biblico"
-        )
+    # Se quiseres transformar "2025-09-01" em "01 set", aqui seria o sítio.
+    # Por agora assumimos que df["Semana"] já tem o texto final.
 
-        dados.append({
-            "Semana": semana,
-            "Secção": "Viver como Cristãos",
-            "Ordem": "Parte fixa 1",
-            "Parte": "Estudo Bíblico de Congregação (30 min)",
-            "Responsável": resp_estudo
-        })
+    # 2) Secção Tesouros
+    pdf.secao_imagem("assets/tesouros.png")
+    pdf.desenhar_tabela_mensal(semanas)
 
-        resp_leitor = st.selectbox(
-            f"Leitor do Estudo Bíblico ({semana})",
-            nomes_visiveis,
-            key=f"{semana}_leitor_estudo"
-        )
+    # 3) Secção Empenha-se no Ministério
+    pdf.ln(8)
+    pdf.secao_imagem("assets/ministerio.png")
+    # Neste modelo, a tabela já inclui a parte de ministério, por isso não repetimos.
 
-        dados.append({
-            "Semana": semana,
-            "Secção": "Viver como Cristãos",
-            "Ordem": "Parte fixa 2",
-            "Parte": "Leitor do Estudo Bíblico",
-            "Responsável": resp_leitor
-        })
+    # 4) Secção Viver como Cristãos
+    pdf.ln(8)
+    pdf.secao_imagem("assets/viver.png")
+    # Também já incluída na tabela.
 
-    # -------------------------
-    # Final da Reunião
-    # -------------------------
-    st.subheader("Final da Reunião")
+    buffer = io.BytesIO()
+    pdf.output(buffer)
+    return buffer.getvalue()
 
-    oracao_final = st.selectbox(f"Oração Final ({semana})", nomes_visiveis, key=f"oracao_final_{semana}")
-    dados.append({"Semana": semana, "Secção": "Final da Reunião", "Ordem": "Encerramento", "Parte": "Oração Final", "Responsável": oracao_final})
 
 # -------------------------
-# Exportação
+# Página principal Streamlit
 # -------------------------
-partes_df_final = pd.DataFrame(dados)
+st.title("📦 Exportações e Histórico")
 
-st.subheader("Exportação")
+if not os.path.exists("partes.csv"):
+    st.warning("⚠️ Ainda não existe o ficheiro partes.csv. Gera primeiro na página das reuniões.")
+    st.stop()
+
+df = pd.read_csv("partes.csv")
+st.success("✔️ Ficheiro partes.csv carregado com sucesso!")
+
+# -------------------------
+# Filtros
+# -------------------------
+st.subheader("🔍 Filtros")
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    if st.button("💾 Guardar CSV"):
-        partes_df_final.to_csv("partes.csv", index=False)
-        st.success("Guardado como partes.csv")
+    semanas = ["Todos"] + sorted(df["Semana"].dropna().unique().tolist()) if "Semana" in df.columns else ["Todos"]
+    filtro_semana = st.selectbox("Semana:", semanas)
 
 with col2:
-    st.download_button(
-        "📥 Exportar CSV",
-        data=partes_df_final.to_csv(index=False),
-        file_name="partes.csv",
-        mime="text/csv"
-    )
+    secoes = ["Todos"] + sorted(df["Secção"].dropna().unique().tolist()) if "Secção" in df.columns else ["Todos"]
+    filtro_secao = st.selectbox("Secção:", secoes)
 
 with col3:
-    pdf_bytes = export_pdf(partes_df_final)
-    st.download_button(
-        "📄 Exportar PDF",
-        data=pdf_bytes,
-        file_name="partes.pdf",
-        mime="application/pdf"
-    )
+    if "Responsável" in df.columns:
+        responsaveis = ["Todos"] + sorted(df["Responsável"].dropna().unique().tolist())
+    else:
+        responsaveis = ["Todos"]
+    filtro_resp = st.selectbox("Responsável:", responsaveis)
+
+df_filtrado = df.copy()
+
+if filtro_semana != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["Semana"] == filtro_semana]
+
+if filtro_secao != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["Secção"] == filtro_secao]
+
+if filtro_resp != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["Responsável"] == filtro_resp]
+
+st.dataframe(df_filtrado, use_container_width=True)
+
+# -------------------------
+# Exportações
+# -------------------------
+st.subheader("📤 Exportar")
+
+colA, colB, colC, colD, colE = st.columns(5)
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+
+# CSV
+with colA:
+    csv_bytes = df_filtrado.to_csv(index=False).encode("utf-8")
+    st.download_button("📥 CSV", csv_bytes, file_name=f"partes_{timestamp}.csv", mime="text/csv")
+    with open(f"{EXPORT_DIR}/partes_{timestamp}.csv", "wb") as f:
+        f.write(csv_bytes)
+
+# PDF lista
+with colB:
+    pdf_bytes = gerar_pdf_lista(df_filtrado)
+    st.download_button("📄 PDF Lista", pdf_bytes, file_name=f"partes_{timestamp}.pdf", mime="application/pdf")
+    with open(f"{EXPORT_DIR}/partes_{timestamp}.pdf", "wb") as f:
+        f.write(pdf_bytes)
+
+# PDF mensal (Modelo A)
+with colC:
+    titulo_mensal = st.text_input("Título PDF Mensal", "Reunião Vida e Ministério Cristãos")
+    pdf_mensal_bytes = gerar_pdf_mensal(df, titulo=titulo_mensal)
+    st.download_button("🗓️ PDF Mensal (Modelo A)", pdf_mensal_bytes, file_name=f"modelo_mensal_{timestamp}.pdf", mime="application/pdf")
+    with open(f"{EXPORT_DIR}/modelo_mensal_{timestamp}.pdf", "wb") as f:
+        f.write(pdf_mensal_bytes)
+
+# Excel
+with colD:
+    excel_buffer = io.BytesIO()
+    df_filtrado.to_excel(excel_buffer, index=False)
+    st.download_button("📊 Excel", excel_buffer.getvalue(), file_name=f"partes_{timestamp}.xlsx")
+    with open(f"{EXPORT_DIR}/partes_{timestamp}.xlsx", "wb") as f:
+        f.write(excel_buffer.getvalue())
+
+# Placeholder para futuro (ex: ZIP, etc.)
+with colE:
+    st.write("")
+
+# -------------------------
+# Histórico
+# -------------------------
+st.subheader("📚 Histórico de Exportações")
+
+ficheiros = sorted(os.listdir(EXPORT_DIR), reverse=True)
+
+for f in ficheiros:
+    caminho = f"{EXPORT_DIR}/{f}"
+    with open(caminho, "rb") as file:
+        st.download_button(f"⬇️ {f}", file.read(), file_name=f)
