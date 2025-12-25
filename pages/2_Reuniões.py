@@ -219,28 +219,68 @@ def gerar_pdf_mensal(df, titulo="Reunião Vida e Ministério Cristãos"):
     pdf = PDFModeloMensal(titulo=titulo)
     pdf.add_page()
 
-    # 1) Determinar semanas únicas a partir do DF
+    # 1) Semanas únicas (texto tal como aparece no CSV)
     if "Semana" not in df.columns:
         semanas = []
     else:
         semanas = sorted(df["Semana"].dropna().unique().tolist())
 
-    # Se quiseres transformar "2025-09-01" em "01 set", aqui seria o sítio.
-    # Por agora assumimos que df["Semana"] já tem o texto final.
+    # 2) Construir dicionário (semana, parte) -> responsável
+    #    Aqui usamos a coluna "Parte" como chave principal
+    mapa = {}
+    for _, row in df.iterrows():
+        sem = str(row.get("Semana", "")).strip()
+        parte = str(row.get("Parte", "")).strip()
+        resp = str(row.get("Responsá", "")).strip() if "Responsá" in df.columns else str(row.get("Responsável", "")).strip()
+        if sem and parte:
+            mapa[(sem, parte)] = resp
 
-    # 2) Secção Tesouros
+    # 3) Lista fixa de linhas (partes) na ordem do modelo
+    linhas = [
+        ("Início da Reunião", "Presidente"),
+        ("Início da Reunião", "Oração Inicial"),
+        ("Tesouros da Palavra de Deus", "Tesouros da Palavra de Deus"),
+        ("Tesouros da Palavra de Deus", "Pérolas Espirituais"),
+        ("Tesouros da Palavra de Deus", "Leitura da Bíblia"),
+        ("Empenha-se no Ministério", "Iniciar conversas (1 min) — 1"),
+        ("Empenha-se no Ministério", "Iniciar conversas (1 min) — 2"),
+        ("Empenha-se no Ministério", "Iniciar conversas (1 min) — 3"),
+        ("Viver como Cristãos", "Parte variável 1 (5 min)"),
+        ("Viver como Cristãos", "Estudo Bíblico de Congregação (30 min)"),
+        ("Viver como Cristãos", "Leitor do Estudo Bíblico"),
+        ("Final da Reunião", "Oração Final"),
+    ]
+
+    # 4) Cabeçalho da secção + imagem TESOUROS
     pdf.secao_imagem("assets/tesouros.png")
-    pdf.desenhar_tabela_mensal(semanas)
 
-    # 3) Secção Empenha-se no Ministério
-    pdf.ln(8)
-    pdf.secao_imagem("assets/ministerio.png")
-    # Neste modelo, a tabela já inclui a parte de ministério, por isso não repetimos.
+    # 5) Desenhar tabela: colunas = semanas, linhas = partes
+    pdf.set_font("DejaVu", "B", 10)
+    col_desc_w = 70
+    col_sem_w = (190 - col_desc_w) / max(len(semanas), 1)
 
-    # 4) Secção Viver como Cristãos
-    pdf.ln(8)
-    pdf.secao_imagem("assets/viver.png")
-    # Também já incluída na tabela.
+    # Cabeçalho
+    pdf.cell(col_desc_w, 8, "Parte", border=1, align="L")
+    for sem in semanas:
+        pdf.cell(col_sem_w, 8, sem, border=1, align="C")
+    pdf.ln()
+
+    # Linhas
+    for secao, parte_label in linhas:
+        pdf.set_font("DejaVu", "B", 9)
+        pdf.cell(col_desc_w, 7, f"{secao} — {parte_label}", border=1, align="L")
+
+        pdf.set_font("DejaVu", "", 9)
+        for sem in semanas:
+            # Tentar encontrar a parte correspondente no df
+            # Aqui fazemos matching por "Parte" aproximado
+            resp = ""
+            for (s, p), r in mapa.items():
+                if s == sem and parte_label.split(" — ")[0].split("(")[0].strip() in p:
+                    resp = r
+                    break
+            pdf.cell(col_sem_w, 7, resp, border=1, align="C")
+        pdf.ln()
 
     buffer = io.BytesIO()
     pdf.output(buffer)
