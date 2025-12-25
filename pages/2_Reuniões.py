@@ -60,7 +60,9 @@ def export_pdf(df):
         pdf.cell(col_widths[4], 8, str(row["Responsável"]), border=1)
         pdf.ln()
 
-    return pdf.output(dest="S").encode("latin-1")
+    buffer = io.BytesIO()
+    pdf.output(buffer)
+    return buffer.getvalue()
 
 # -------------------------
 # APP
